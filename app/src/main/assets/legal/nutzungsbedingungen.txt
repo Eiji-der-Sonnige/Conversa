@@ -1,5 +1,5 @@
 NUTZUNGSBEDINGUNGEN, HAFTUNGS- UND GEWÄHRLEISTUNGSHINWEISE
-Stand: 21.11.2026
+Stand: 22.11.2026
 
 1. Gegenstand
 Conversa ist ein privates, nicht-kommerzielles Open-Source-Hobbyprojekt. Die App wird kostenlos als Software zum Herunterladen bereitgestellt (z. B. über GitHub Releases) und ist ein neutrales technisches Werkzeug für die legale Kommunikation.
@@ -33,6 +33,7 @@ Conversa ist auf Anonymität und Ende-zu-Ende-Verschlüsselung ausgelegt. Vollst
 - Externe Server sehen technisch bedingt Verbindungsdaten wie die IP-Adresse.
 - Bei Anrufen ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
 - Textnachrichten haben keine Forward Secrecy: Wird das Passwort bekannt, können auf Relays gespeicherte ältere Nachrichten entschlüsselt werden.
+- Die Zwei-Faktor-Authentifizierung wird nur innerhalb der App durchgesetzt. Sie schützt nicht vor Personen, die Benutzername und Passwort kennen.
 - Die Software wurde keinem unabhängigen Sicherheits-Audit unterzogen und bisher vor allem durch automatisierte Tests geprüft.
 Die Nutzung erfolgt auf eigenes Risiko. Für besonders schutzbedürftige Kommunikation sollten zusätzlich geprüfte Lösungen verwendet werden.
 

@@ -203,9 +203,16 @@ Kontakt-ID = Bech32("npub", pubKey)
 - **Abfrage:** beim Login (vor dem Speichern der Sitzung) und bei jedem App-Kaltstart.
 - **Deaktivieren:** nur mit gültigem aktuellem Code.
 
-> **Hinweis:** Da es keinen Server gibt, wird die 2FA in der App selbst durchgesetzt. Sie schützt
-> zuverlässig gegen fremden Zugriff auf das Gerät bzw. die App. Wer das Passwort kennt und eine
-> modifizierte App verwendet, kann sie umgehen. Der Hauptschutz ist daher ein starkes Passwort.
+- **Ohne Relay-Antwort kein Login:** Antwortet beim Anmelden kein Relay, bricht Conversa ab (seit 1.2.2).
+  Vorher ließ sich die 2FA auf einem neuen Gerät durch einen Login im Flugmodus überspringen, und
+  „Konto erstellen“ konnte ein bestehendes Konto (Kontakte, 2FA) mit einem leeren überschreiben.
+
+> **Wichtig – Grenzen der 2FA:** Da es keinen Server gibt, wird die 2FA nur in der App selbst
+> durchgesetzt. Sie ist eine **zusätzliche Sperre der App** (z. B. bei einem fremden oder geteilten
+> Gerät). Sie schützt **nicht** vor jemandem, der Benutzername und Passwort kennt: Der private
+> Schlüssel ergibt sich allein aus diesen beiden Angaben und kann mit jeder Nostr-Software benutzt
+> werden. Das 2FA-Geheimnis selbst ist mit demselben Schlüssel verschlüsselt. Der eigentliche Schutz
+> ist daher ein **langes, einzigartiges Passwort**.
 
 ---
 
@@ -475,7 +482,15 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
 - **Metadaten bei Dritt-Servern:** Relays, Blossom- und STUN-Server erhalten technisch bedingt die
   IP-Adresse (ohne Tor) sowie Zeitpunkte, Datenmengen und den öffentlichen Schlüssel des Empfängers.
 - **Passwort-Wiederherstellung** ist prinzipbedingt unmöglich.
-- **2FA** wird nur in der App durchgesetzt (siehe Abschnitt 6).
+- **2FA** wird nur in der App durchgesetzt und schützt nicht vor jemandem, der Benutzername und
+  Passwort kennt (siehe Abschnitt 6).
+- **Offline-Rateangriffe:** Der öffentliche Schlüssel ist auf den Relays sichtbar. Wer den Benutzernamen
+  errät, kann Passwörter offline durchprobieren; Argon2id (64 MB) bremst das nur. Kurze oder
+  wiederverwendete Passwörter sind deshalb ein reales Risiko.
+- **Bilder von bekannten Kontakten** werden automatisch von der Adresse geladen, die der Absender
+  angibt; dieser Server sieht dabei die IP-Adresse (ohne Tor). Bei Nachrichtenanfragen erst nach Tippen.
+- **Tor und Anrufe:** Anrufe laufen nicht über Tor. Mit Tor und eingetragenem TURN-Server wird
+  „Nur über TURN“ automatisch erzwungen; ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
 - **Keine Forward Secrecy für Textnachrichten:** NIP-44 nutzt statische Schlüssel. Wird das Passwort
   kompromittiert, sind auf Relays gespeicherte alte Nachrichten lesbar. (Anrufe haben Forward Secrecy.)
 - **Empfang nur bei laufender App:** Es gibt keine Push-Benachrichtigungen (bewusst ohne Google-Dienste).
@@ -535,6 +550,7 @@ RFC 6238, RFC 7539, RFC 5869, RFC 9106 (Argon2), Blossom BUD-01/02.
 
 | Version | Build | Änderungen |
 |---|---|---|
+| 1.2.2 | 6 | Sicherheitsupdate: 2FA lässt sich nicht mehr per Login im Flugmodus überspringen; „Konto erstellen“ überschreibt kein bestehendes Konto mehr; Prüfung empfangener Mediendaten (Pfadmanipulation, Größenlimit); Bilder aus Nachrichtenanfragen erst nach Tippen; zu lange Nachrichten werden abgelehnt statt zu hängen; mit Tor wird TURN erzwungen; ehrlichere Beschreibung der 2FA-Grenzen |
 | 1.2.1 | 5 | Absturz beim Start (R8) behoben; Medien-Server auf Server umgestellt, die verschlüsselte Dateien annehmen; 2FA gleicht falsch gehende Geräteuhr per Netzwerkzeit aus; im Emulator mit Android 17 getestet |
 | 1.2.0 | 4 | Ausrichtung als nicht-kommerzielles Open-Source-Hobbyprojekt (Apache 2.0, GitHub Releases): überarbeitete Nutzungsbedingungen (Eigenverantwortung der Nutzer, keine Gewährleistung, Haftung nach §§ 521, 523, 524 BGB), Datenschutzhinweise ohne Verantwortlichen-Angaben, Impressum entfernt, Zustimmung bei jeder Anmeldung, README/LICENSE/NOTICE/SECURITY.md, lokale Release-Signatur |
 | 1.1.1 | 3 | Nutzungsbedingungen, Datenschutzerklärung und Impressum in der App; Zustimmung bei Kontoerstellung; vollständige Open-Source-Lizenztexte und Copyright-Hinweise in der App; realistischere Formulierungen zu Anonymität und Sicherheit |

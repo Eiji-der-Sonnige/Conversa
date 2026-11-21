@@ -116,6 +116,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     finishLogin(identity)
                 }
             } catch (e: Exception) {
+                // Halb angemeldeten Zustand nicht weiterlaufen lassen (keine Sitzung gespeichert).
+                withContext(Dispatchers.IO) { _messenger.value?.stop() }
+                _messenger.value = null
                 _error.value = "Anmeldung fehlgeschlagen: ${e.message}"
             } finally {
                 _busy.value = false

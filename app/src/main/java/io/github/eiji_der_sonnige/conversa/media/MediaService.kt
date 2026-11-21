@@ -89,9 +89,21 @@ class MediaService(
         throw IOException(if (errors.isEmpty()) "Kein Medien-Server konfiguriert" else errors.joinToString("; "))
     }
 
+    /** Lädt höchstens [MAX_DOWNLOAD] Bytes – schützt vor Speicherüberlauf durch manipulierte Links. */
     private fun fetch(url: String): ByteArray? = try {
-        http.newCall(Request.Builder().url(url).build()).execute().use { r ->
-            if (r.isSuccessful) r.body?.bytes() else null
+        http.newCall(Request.Builder().url(url).build()).execute().use resp@{ r ->
+            val body = r.body
+            if (!r.isSuccessful || body == null || body.contentLength() > MAX_DOWNLOAD) return@resp null
+            val out = java.io.ByteArrayOutputStream()
+            val buf = ByteArray(64 * 1024)
+            val input = body.byteStream()
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                out.write(buf, 0, n)
+                if (out.size() > MAX_DOWNLOAD) return@resp null
+            }
+            out.toByteArray()
         }
     } catch (e: Exception) {
         null
@@ -99,6 +111,7 @@ class MediaService(
 
     /** Lädt (oder nimmt aus dem Cache), prüft SHA-256 und entschlüsselt. */
     suspend fun load(media: Media): ByteArray = withContext(Dispatchers.IO) {
+        require(media.isWellFormed()) { "Ungültige Mediendaten" }
         val cached = File(cacheDir, media.sha256)
         val enc = if (cached.exists()) {
             cached.readBytes()
@@ -128,5 +141,10 @@ class MediaService(
 
     fun clearTemp() {
         tmpDir.deleteRecursively()
+    }
+
+    companion object {
+        /** Maximale Dateigröße beim Senden (50 MB) plus 16 Byte GCM-Tag. */
+        const val MAX_DOWNLOAD = 50L * 1024 * 1024 + 16
     }
 }

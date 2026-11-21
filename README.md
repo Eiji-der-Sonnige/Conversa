@@ -58,6 +58,8 @@ Inhalte oder Datenverarbeitung. Technisch bedingt sehen diese Server z. B. die I
 - Bei Anrufen ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
 - Nachrichten kommen nur an, solange die App läuft (keine Push-Dienste).
 - Ein verlorenes Passwort kann nicht wiederhergestellt werden.
+- Die 2FA ist nur eine Sperre innerhalb der App: Wer Benutzername und Passwort kennt, kommt auch ohne
+  2FA an das Konto. Deshalb ein langes, einzigartiges Passwort verwenden.
 
 Ausführliche Beschreibung: [DOKUMENTATION.md](DOKUMENTATION.md)
 

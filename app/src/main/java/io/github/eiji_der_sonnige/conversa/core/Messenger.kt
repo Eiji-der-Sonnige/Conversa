@@ -126,7 +126,9 @@ class Messenger(
                     .setUsername(settings.turnUser).setPassword(settings.turnPass).createIceServer()
             )
         }
-        return CallManager.IceConfig(servers, settings.relayOnlyCalls && settings.turnUrl.isNotBlank())
+        // Mit Tor wäre ein direkter Anruf ein IP-Leck: Ist ein TURN-Server eingetragen, wird er erzwungen.
+        val forceRelay = (settings.relayOnlyCalls || settings.useTor) && settings.turnUrl.isNotBlank()
+        return CallManager.IceConfig(servers, forceRelay)
     }
 
     // ------------------------------------------------------------------ Empfang
@@ -156,7 +158,9 @@ class Messenger(
                 val key = r.tag("decryption-key") ?: return
                 val nonce = r.tag("decryption-nonce") ?: return
                 val sha = r.tag("x") ?: return
-                val m = Media(r.content, mime, key, nonce, sha, r.tag("size")?.toLongOrNull() ?: 0L)
+                val m = Media(r.content, mime, key.lowercase(), nonce.lowercase(), sha.lowercase(),
+                    r.tag("size")?.toLongOrNull() ?: 0L)
+                if (!m.isWellFormed()) return
                 val type = when {
                     mime.startsWith("image/") -> MsgType.IMAGE
                     mime.startsWith("video/") -> MsgType.VIDEO
@@ -196,6 +200,10 @@ class Messenger(
         val clean = text.trim().take(20_000)
         if (clean.isEmpty()) return@withContext
         val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_CHAT, listOf(listOf("p", peer)), clean)
+        // NIP-44 verschlüsselt höchstens 64 KiB; Rumor wird zweifach verpackt (Seal + Gift Wrap).
+        if (rumor.toJson().toString().toByteArray(Charsets.UTF_8).size > MAX_RUMOR_BYTES) {
+            throw IOException("Nachricht zu lang – bitte aufteilen")
+        }
         store.upsertMessage(ChatMessage(rumor.id, peer, true, MsgType.TEXT, clean, null, rumor.createdAt, MsgStatus.SENDING))
         publishRumor(rumor, peer, rumor.id)
     }
@@ -275,18 +283,28 @@ class Messenger(
      * Kontaktliste und 2FA-Geheimnis liegen verschlüsselt (NIP-44, nur für dich lesbar) als
      * ersetzbares Event (Kind 30078) auf den Relays – so funktioniert das Konto auf jedem Gerät.
      */
+    /**
+     * Liefert null nur, wenn mindestens ein Relay die Abfrage vollständig beantwortet hat und es
+     * wirklich kein Konto-Event gibt. Ohne Antwort wird abgebrochen: Sonst würde ein Login im
+     * Flugmodus die 2FA überspringen und „Konto erstellen“ das bestehende Konto (Kontakte, 2FA)
+     * mit einem leeren Konto überschreiben.
+     */
     suspend fun fetchAccount(): JSONObject? {
         val filter = JSONObject()
             .put("kinds", JSONArray().put(30078))
             .put("authors", JSONArray().put(identity.pubHex))
             .put("#d", JSONArray().put(accountTag))
-        val latest = relays.query(listOf(filter)).filter { it.pubkey == identity.pubHex }.maxByOrNull { it.createdAt }
+        val res = relays.queryWithEose(listOf(filter), timeoutMs = 12_000)
+        if (res.eoseCount == 0) {
+            throw IOException("Keine Antwort von den Relays. Bitte Internetverbindung (bzw. Orbot) prüfen und erneut versuchen.")
+        }
+        val latest = res.events.filter { it.pubkey == identity.pubHex }.maxByOrNull { it.createdAt }
             ?: return null
         return try {
             val selfKey = Nip44.conversationKey(identity.privKey, identity.pubHex.hexToBytes())
             JSONObject(Nip44.decrypt(latest.content, selfKey))
         } catch (e: Exception) {
-            null
+            throw IOException("Konto-Daten konnten nicht gelesen werden")
         }
     }
 
@@ -334,5 +352,6 @@ class Messenger(
     companion object {
         private const val TAG = "Messenger"
         const val MAX_MEDIA = 50L * 1024 * 1024
+        private const val MAX_RUMOR_BYTES = 40_000
     }
 }

@@ -18,7 +18,19 @@ data class Media(
         .put("url", url).put("mime", mime).put("key", keyHex)
         .put("nonce", nonceHex).put("sha", sha256).put("size", size)
 
+    /**
+     * Prüft vom Absender gelieferte Felder, bevor sie verwendet werden: Die Prüfsumme dient als
+     * Dateiname im Cache (Schutz vor Pfadmanipulation wie "../"), Schlüssel/Nonce müssen exakt
+     * die Länge für AES-256-GCM haben, und Dateien werden nur über HTTPS geladen.
+     */
+    fun isWellFormed(): Boolean =
+        HEX64.matches(sha256) && HEX64.matches(keyHex) && HEX24.matches(nonceHex) &&
+            url.startsWith("https://") && url.length <= 2048 && size >= 0 && mime.length <= 128
+
     companion object {
+        private val HEX64 = Regex("^[0-9a-f]{64}$")
+        private val HEX24 = Regex("^[0-9a-f]{24}$")
+
         fun fromJson(o: JSONObject) = Media(
             o.getString("url"), o.getString("mime"), o.getString("key"),
             o.getString("nonce"), o.getString("sha"), o.optLong("size")

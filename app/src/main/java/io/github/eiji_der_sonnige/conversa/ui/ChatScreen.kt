@@ -164,7 +164,8 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(msgs, key = { it.id }) { msg ->
-                    MessageBubble(m, msg, onRetry = { vm.resend(msg) }, onPlay = { videoToPlay = msg })
+                    MessageBubble(m, msg, trusted = contact?.accepted == true || msg.fromMe,
+                        onRetry = { vm.resend(msg) }, onPlay = { videoToPlay = msg })
                 }
             }
             Row(
@@ -216,7 +217,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
 }
 
 @Composable
-private fun MessageBubble(m: Messenger, msg: ChatMessage, onRetry: () -> Unit, onPlay: () -> Unit) {
+private fun MessageBubble(m: Messenger, msg: ChatMessage, trusted: Boolean, onRetry: () -> Unit, onPlay: () -> Unit) {
     val mine = msg.fromMe
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
         Surface(
@@ -227,7 +228,7 @@ private fun MessageBubble(m: Messenger, msg: ChatMessage, onRetry: () -> Unit, o
             Column(Modifier.padding(10.dp)) {
                 when {
                     msg.media == null -> Text(msg.text)
-                    msg.type == MsgType.IMAGE -> EncryptedImage(m, msg)
+                    msg.type == MsgType.IMAGE -> EncryptedImage(m, msg, trusted)
                     msg.type == MsgType.VIDEO -> Row(
                         Modifier.clickable(onClick = onPlay).padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -256,11 +257,18 @@ private fun MessageBubble(m: Messenger, msg: ChatMessage, onRetry: () -> Unit, o
 }
 
 @Composable
-private fun EncryptedImage(m: Messenger, msg: ChatMessage) {
+private fun EncryptedImage(m: Messenger, msg: ChatMessage, trusted: Boolean) {
     val media = msg.media ?: return
     var bmp by remember(media.sha256) { mutableStateOf<ImageBitmap?>(null) }
     var failed by remember(media.sha256) { mutableStateOf(false) }
     var fullscreen by remember { mutableStateOf(false) }
+    // Bei Nachrichtenanfragen erst nach ausdrücklichem Tippen laden: Der Link stammt vom Absender,
+    // und schon der Abruf würde dem dortigen Server die eigene IP-Adresse verraten.
+    var allowed by remember(media.sha256) { mutableStateOf(trusted) }
+    if (!allowed) {
+        TextButton({ allowed = true }) { Text("🖼 Bild von unbekanntem Absender laden") }
+        return
+    }
     LaunchedEffect(media.sha256) {
         try {
             val bytes = m.media.load(media)

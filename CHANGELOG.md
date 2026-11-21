@@ -2,6 +2,29 @@
 
 Alle nennenswerten Änderungen an Conversa. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.2.2] – 2026-11-22 (Build 6)
+Sicherheitsupdate. Aktualisieren wird empfohlen.
+
+### Sicherheit
+- **2FA ließ sich überspringen:** Ein Login auf einem neuen Gerät ohne Relay-Verbindung (z. B. im
+  Flugmodus) fragte keinen 2FA-Code ab. Ohne Antwort eines Relays wird die Anmeldung jetzt abgebrochen.
+- **Datenverlust:** „Konto erstellen“ mit bestehenden Zugangsdaten konnte bei langsamer Verbindung das
+  Konto (Kontakte, 2FA) mit einem leeren überschreiben. Behoben (gleiche Ursache wie oben).
+- Empfangene Mediendaten werden geprüft (Prüfsumme, Schlüssel, Nonce, HTTPS). Verhindert u. a.
+  Pfadmanipulation im Cache.
+- Downloads sind auf 50 MB begrenzt (Schutz vor Speicherüberlauf durch manipulierte Links).
+- Bilder aus Nachrichtenanfragen unbekannter Absender werden erst nach Tippen geladen (sonst IP-Leck an
+  einen vom Absender gewählten Server).
+- Mit Tor und eingetragenem TURN-Server laufen Anrufe automatisch nur über TURN.
+
+### Korrigiert
+- Sehr lange Nachrichten (z. B. viele nicht-lateinische Zeichen) blieben dauerhaft auf „wird gesendet“
+  hängen. Sie werden jetzt mit einer Meldung abgelehnt.
+
+### Dokumentation
+- Grenzen der 2FA und das Risiko von Offline-Rateangriffen werden offen beschrieben (README,
+  Dokumentation, Nutzungsbedingungen). Datenschutzhinweise ergänzt um das Laden empfangener Medien.
+
 ## [1.2.1] – 2026-11-21 (Build 5)
 ### Korrigiert
 - **Absturz beim Start** der Release-Version (v1.2.0) behoben: Die teilweise R8-Optimierung machte

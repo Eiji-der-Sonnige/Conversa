@@ -168,7 +168,13 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
     }
 
     /** Einmalige Abfrage, wartet auf EOSE der verbundenen Relays oder Timeout. */
-    suspend fun query(filters: List<JSONObject>, timeoutMs: Long = 7000): List<Event> = coroutineScope {
+    suspend fun query(filters: List<JSONObject>, timeoutMs: Long = 7000): List<Event> =
+        queryWithEose(filters, timeoutMs).events
+
+    /** Ergebnis einer Abfrage samt Anzahl der Relays, die sie vollständig beantwortet haben (EOSE). */
+    data class QueryResult(val events: List<Event>, val eoseCount: Int)
+
+    suspend fun queryWithEose(filters: List<JSONObject>, timeoutMs: Long = 7000): QueryResult = coroutineScope {
         val id = "q" + randomBytes(6).toHex()
         val result = ConcurrentHashMap<String, Event>()
         val eoseFrom = ConcurrentHashMap.newKeySet<String>()
@@ -189,7 +195,7 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
         unsubscribe(id)
         j1.cancel()
         j2.cancel()
-        result.values.toList()
+        QueryResult(result.values.toList(), eoseFrom.size)
     }
 
     fun close() {

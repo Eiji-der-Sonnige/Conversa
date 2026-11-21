@@ -1,5 +1,5 @@
 DATENSCHUTZHINWEISE
-Stand: 21.11.2026
+Stand: 22.11.2026
 
 1. Grundsatz
 Conversa ist ein nicht-kommerzielles Open-Source-Hobbyprojekt. Die Entwickler betreiben keine Server und erhalten keinerlei Daten der Nutzer – weder Kontodaten noch Nachrichten, Kontakte, Medien, IP-Adressen oder Nutzungsstatistiken. Sie erheben, speichern oder verarbeiten über die App keine personenbezogenen Daten.
@@ -27,6 +27,7 @@ a) Nostr-Relays (voreingestellt: relay.damus.io, nos.lol, relay.primal.net, nost
 b) Blossom-Medien-Server (voreingestellt: nostr.download, blossom.yakihonne.com, files.sovbit.host)
 - IP-Adresse und Zeitpunkt,
 - verschlüsselte Dateien, deren Prüfsumme (SHA-256) und Größe. Uploads werden mit einem Einmal-Schlüssel signiert und nicht dem Nostr-Konto zugeordnet.
+- Empfangene Bilder und Videos werden von der Adresse geladen, die der Absender in der Nachricht angibt. Der dortige Server erhält dabei die IP-Adresse. Bei Nachrichtenanfragen unbekannter Absender geschieht das erst nach ausdrücklichem Tippen.
 
 c) STUN-Server für Anrufe (stun.l.google.com – Google LLC; stun.cloudflare.com – Cloudflare, Inc.)
 - IP-Adresse und Port zur Ermittlung der öffentlichen Netzwerkadresse.
