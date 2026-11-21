@@ -1,0 +1,40 @@
+# Baut die App und führt die Krypto-Tests bei jedem Push und Pull Request aus.
+# Es werden keine Signaturschlüssel verwendet; die Debug-APK wird nur als Build-Artefakt abgelegt.
+name: Build & Tests
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit-Tests
+        run: ./gradlew --no-configuration-cache :app:testDebugUnitTest
+
+      - name: Debug-APK bauen
+        run: ./gradlew --no-configuration-cache :app:assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conversa-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14

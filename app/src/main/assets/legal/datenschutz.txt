@@ -1,0 +1,56 @@
+DATENSCHUTZHINWEISE
+Stand: 21.11.2026
+
+1. Grundsatz
+Conversa ist ein nicht-kommerzielles Open-Source-Hobbyprojekt. Die Entwickler betreiben keine Server und erhalten keinerlei Daten der Nutzer – weder Kontodaten noch Nachrichten, Kontakte, Medien, IP-Adressen oder Nutzungsstatistiken. Sie erheben, speichern oder verarbeiten über die App keine personenbezogenen Daten.
+Die App enthält keine Werbung, kein Tracking, keine Analyse- oder Absturzberichtsdienste und keine Google-Play-Dienste/Firebase.
+Diese Hinweise dienen der Transparenz darüber, was die App auf dem Gerät tut und welche Daten sie im Auftrag der Nutzer an Server Dritter überträgt.
+
+2. Verarbeitung auf dem Gerät
+Folgende Daten werden ausschließlich lokal auf dem Gerät gespeichert und mit einem Schlüssel aus dem Android Keystore (AES-256-GCM) verschlüsselt:
+- der aus Benutzername und Passwort abgeleitete private Schlüssel und der Benutzername,
+- Kontakte (öffentliche Schlüssel und selbst vergebene Namen),
+- Nachrichten und der Zwischenspeicher für Medien,
+- das Geheimnis der Zwei-Faktor-Authentifizierung (falls aktiviert),
+- Netzwerkeinstellungen.
+Das Passwort selbst wird nicht gespeichert. Alle lokalen Daten werden beim Abmelden oder bei der Deinstallation gelöscht. Es werden keine Backups angelegt.
+
+3. Übertragung an Server Dritter
+Für die dezentrale Kommunikation verbindet sich die App mit Servern, die von unabhängigen Dritten betrieben werden. Die Liste ist voreingestellt und kann in den Einstellungen geändert werden. Für die Datenverarbeitung auf diesen Servern sind deren Betreiber verantwortlich; es gelten deren Datenschutzbestimmungen. Die Server können außerhalb der Europäischen Union betrieben werden. Technisch bedingt werden übertragen:
+
+a) Nostr-Relays (voreingestellt: relay.damus.io, nos.lol, relay.primal.net, nostr.mom, relay.snort.social)
+- IP-Adresse und Verbindungszeitpunkte,
+- der eigene öffentliche Schlüssel (pseudonyme Kennung) bei Abonnements,
+- Ende-zu-Ende-verschlüsselte Nachrichten-Hüllen („Gift Wraps“), die den öffentlichen Schlüssel des Empfängers enthalten, jedoch nicht den Absender, den Inhalt oder den genauen Zeitpunkt,
+- ein verschlüsseltes Konto-Event (Kontakte, 2FA-Einstellung), das nur mit dem eigenen Schlüssel lesbar ist, aber dem öffentlichen Schlüssel zugeordnet werden kann.
+
+b) Blossom-Medien-Server (voreingestellt: blossom.primal.net, blossom.band)
+- IP-Adresse und Zeitpunkt,
+- verschlüsselte Dateien, deren Prüfsumme (SHA-256) und Größe. Uploads werden mit einem Einmal-Schlüssel signiert und nicht dem Nostr-Konto zugeordnet.
+
+c) STUN-Server für Anrufe (stun.l.google.com – Google LLC; stun.cloudflare.com – Cloudflare, Inc.)
+- IP-Adresse und Port zur Ermittlung der öffentlichen Netzwerkadresse.
+
+d) Gesprächspartner bei Anrufen
+- Bei direkten Peer-to-Peer-Anrufen erhält der Gesprächspartner die IP-Adresse. Dies lässt sich durch einen selbst eingetragenen TURN-Server mit der Option „Nur über TURN“ vermeiden; dann erhält der TURN-Betreiber die IP-Adresse.
+
+e) Tor (optional)
+- Bei aktivierter Tor-Option werden Verbindungen zu Relays und Medien-Servern über die lokal installierte App Orbot geleitet; die Server sehen dann statt der eigenen IP-Adresse die eines Tor-Ausgangsknotens. Anrufe laufen nicht über Tor.
+
+4. Berechtigungen
+- Internet/Netzwerkstatus: Verbindung zu den oben genannten Servern.
+- Kamera und Mikrofon: nur für Anrufe, werden erst beim ersten Anruf angefragt.
+- Benachrichtigungen: lokale Hinweise auf neue Nachrichten, ohne Inhalt und Absender.
+Für die Auswahl von Bildern und Videos wird die Android-Fotoauswahl verwendet; es ist kein Zugriff auf den gesamten Speicher nötig.
+
+5. Zwei-Faktor-Authentifizierung
+Bei Aktivierung wird ein Geheimnis erzeugt und in eine Authenticator-App (z. B. Google Authenticator) übernommen. Für deren Datenverarbeitung ist der jeweilige Anbieter verantwortlich.
+
+6. Download über GitHub
+Beim Herunterladen der App über GitHub verarbeitet GitHub, Inc. Daten nach eigenen Datenschutzbestimmungen. Die Entwickler erhalten dabei keine personenbezogenen Daten der Nutzer.
+
+7. Ihre Rechte
+Lokale Daten können jederzeit durch Abmelden oder Deinstallieren gelöscht werden. Anfragen zu Daten auf Servern Dritter (z. B. Löschung) sind an deren Betreiber zu richten. Unberührt bleibt das Recht auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde.
+
+8. Kontakt
+Fragen und Hinweise können über das GitHub-Repository des Projekts (Issues) gestellt werden. Bitte dort keine personenbezogenen oder vertraulichen Daten veröffentlichen.

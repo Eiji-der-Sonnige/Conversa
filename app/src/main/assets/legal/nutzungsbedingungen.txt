@@ -1,0 +1,50 @@
+NUTZUNGSBEDINGUNGEN, HAFTUNGS- UND GEWÄHRLEISTUNGSHINWEISE
+Stand: 21.11.2026
+
+1. Gegenstand
+Conversa ist ein privates, nicht-kommerzielles Open-Source-Hobbyprojekt. Die App wird kostenlos als Software zum Herunterladen bereitgestellt (z. B. über GitHub Releases) und ist ein neutrales technisches Werkzeug für die legale Kommunikation.
+Die Entwickler betreiben keine Server, keinen Kommunikationsdienst und keine Plattform. Sie haben keinen Zugriff auf Konten, Schlüssel, Kontakte, Nachrichten oder Dateien der Nutzer und können Inhalte weder einsehen, prüfen, sperren noch löschen.
+
+2. Lizenz
+Der Quellcode von Conversa steht unter der Apache License, Version 2.0. Enthaltene Komponenten Dritter stehen unter ihren eigenen Lizenzen (Einstellungen → Info → Open-Source-Lizenzen). Bei Widersprüchen gehen die Lizenzen diesen Bedingungen vor.
+
+3. Zulässige Nutzung
+Die App darf nur im Einklang mit geltendem Recht genutzt werden. Unzulässig ist insbesondere:
+- das Verbreiten rechtswidriger Inhalte (z. B. Darstellungen sexuellen Missbrauchs, volksverhetzende oder terroristische Inhalte),
+- die Verletzung von Urheber-, Marken- oder Persönlichkeitsrechten,
+- Beleidigung, Bedrohung, Nachstellung oder Belästigung anderer,
+- Spam, Betrug sowie das Verbreiten von Schadsoftware,
+- jede sonstige Nutzung zur Vorbereitung oder Begehung von Straftaten.
+
+4. Alleinige Verantwortung der Nutzer
+Jede Person, die Conversa nutzt, handelt eigenverantwortlich und ist allein verantwortlich für
+- die von ihr versendeten, empfangenen und gespeicherten Inhalte,
+- die Auswahl der verwendeten Relays, Medien-Server sowie STUN-/TURN-Server,
+- die Einhaltung der für sie geltenden Gesetze,
+- die Geheimhaltung ihres Passworts und die Sicherung ihrer Daten.
+Die Entwickler sind nicht verantwortlich für Handlungen, Inhalte oder Rechtsverstöße der Nutzer und machen sich diese nicht zu eigen. Nutzer stellen die Entwickler – soweit gesetzlich zulässig – von Ansprüchen Dritter frei, die auf einer rechtswidrigen Nutzung der App durch den jeweiligen Nutzer beruhen.
+Ein verlorenes Passwort kann nicht wiederhergestellt werden; damit verbundene Konten und Daten sind dann dauerhaft unzugänglich.
+
+5. Server Dritter
+Die voreingestellten Nostr-Relays, Blossom-Medien-Server und STUN-Server werden von unabhängigen Dritten betrieben, nicht von den Entwicklern. Sie sind lediglich austauschbare Voreinstellungen. Die Entwickler haben keinen Einfluss auf deren Verfügbarkeit, Speicherdauer, Inhalte oder Datenverarbeitung. Es gelten die Bedingungen und Datenschutzbestimmungen der jeweiligen Betreiber.
+
+6. Sicherheit und Anonymität – keine Garantie
+Conversa ist auf Anonymität und Ende-zu-Ende-Verschlüsselung ausgelegt. Vollständige Anonymität oder absolute Sicherheit werden jedoch nicht zugesichert. Insbesondere:
+- Externe Server sehen technisch bedingt Verbindungsdaten wie die IP-Adresse.
+- Bei Anrufen ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
+- Textnachrichten haben keine Forward Secrecy: Wird das Passwort bekannt, können auf Relays gespeicherte ältere Nachrichten entschlüsselt werden.
+- Die Software wurde keinem unabhängigen Sicherheits-Audit unterzogen und bisher vor allem durch automatisierte Tests geprüft.
+Die Nutzung erfolgt auf eigenes Risiko. Für besonders schutzbedürftige Kommunikation sollten zusätzlich geprüfte Lösungen verwendet werden.
+
+7. Kein Notruf
+Conversa ersetzt keine Notrufdienste. Notrufe (112/110) sind über die App nicht möglich.
+
+8. Keine Gewährleistung, keine Verfügbarkeitszusage
+Die App wird unentgeltlich und „wie besehen“ (as is) überlassen. Es besteht kein Anspruch auf Fehlerfreiheit, eine bestimmte Funktion, Verfügbarkeit, Kompatibilität, Support, Updates oder Weiterentwicklung. Nachrichten können verloren gehen oder verspätet zugestellt werden. Bei unentgeltlicher Überlassung haften die Entwickler für Sach- und Rechtsmängel nur, wenn sie einen Mangel arglistig verschwiegen haben (§§ 523, 524 BGB).
+
+9. Haftung
+Da die App unentgeltlich überlassen wird, haften die Entwickler nur für Vorsatz und grobe Fahrlässigkeit (§ 521 BGB). Unberührt bleiben die Haftung für die Verletzung von Leben, Körper oder Gesundheit, die Haftung für arglistig verschwiegene Mängel sowie die Haftung nach zwingenden gesetzlichen Vorschriften, soweit diese anwendbar sind.
+Für Schäden, die durch Server Dritter, durch die rechtswidrige oder missbräuchliche Nutzung durch andere Personen oder durch den Verlust des Passworts entstehen, haften die Entwickler im Rahmen des Gesetzes nicht.
+
+10. Schlussbestimmungen
+Es gilt deutsches Recht. Zwingende Verbraucherschutzvorschriften des Staates, in dem Nutzer ihren gewöhnlichen Aufenthalt haben, bleiben unberührt. Sollten einzelne Bestimmungen unwirksam sein, bleibt die Wirksamkeit der übrigen unberührt.

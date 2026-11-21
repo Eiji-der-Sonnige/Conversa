@@ -1,0 +1,72 @@
+Conversa – Hinweise zu Drittkomponenten (Third-Party Notices)
+==============================================================
+
+Conversa enthält die folgenden Open-Source-Komponenten. Die vollständigen
+Lizenztexte befinden sich in den Dateien dieses Ordners:
+
+  apache-2.0.txt           Apache License, Version 2.0
+  bouncycastle-mit.txt     Bouncy-Castle-Lizenz (MIT)
+  webrtc-bsd-3-clause.txt  WebRTC-Lizenz (BSD 3-Clause)
+  webrtc-third-party.txt   Lizenzen der in WebRTC enthaltenen Komponenten
+
+Die Komponenten wurden unverändert als Binärbibliotheken eingebunden.
+
+
+Apache License 2.0  (apache-2.0.txt)
+-----------------------------------------------------------------
+Android Jetpack / AndroidX (Compose, Material 3, Material Icons, Activity,
+Core, Lifecycle u. a.)
+  Copyright The Android Open Source Project
+
+Kotlin Standard Library, Kotlin Coroutines
+  Copyright JetBrains s.r.o. and Kotlin Programming Language contributors
+
+JetBrains Java Annotations
+  Copyright JetBrains s.r.o.
+
+OkHttp 4.12.0
+  Copyright Square, Inc.
+
+Okio 3.6.0
+  Copyright Square, Inc.
+
+ZXing Core 3.5.3
+  Copyright ZXing authors
+
+stream-webrtc-android 1.3.8 (Android-Paketierung von WebRTC)
+  Copyright Stream.io, Inc.
+
+Guava ListenableFuture
+  Copyright The Guava Authors
+
+JSpecify
+  Copyright The JSpecify Authors
+
+NOTICE (OkHttp):
+  Note that publicsuffixes.gz is compiled from The Public Suffix List:
+  https://publicsuffix.org/list/public_suffix_list.dat
+
+  It is subject to the terms of the Mozilla Public License, v. 2.0:
+  https://mozilla.org/MPL/2.0/
+
+
+MIT-Lizenz  (bouncycastle-mit.txt)
+-----------------------------------------------------------------
+Bouncy Castle Crypto (bcprov-jdk18on 1.80)
+  Copyright (c) 2000 - 2024 The Legion of the Bouncy Castle Inc.
+  (https://www.bouncycastle.org)
+
+
+BSD 3-Clause  (webrtc-bsd-3-clause.txt)
+-----------------------------------------------------------------
+WebRTC
+  Copyright (c) 2011, The WebRTC project authors. All rights reserved.
+  Für WebRTC gilt zusätzlich die Patentlizenz des WebRTC-Projekts:
+  https://webrtc.googlesource.com/src/+/main/PATENTS
+
+  Die native WebRTC-Bibliothek enthält weitere Drittkomponenten. Deren
+  vollständige Lizenz- und Patenttexte stehen in webrtc-third-party.txt:
+  BoringSSL, Abseil, Opus, libvpx, libaom, dav1d, libyuv, libsrtp,
+  Protocol Buffers lite, libevent, CRC32C, PFFFT, RNNoise, LLVM libc++/libc++abi
+  sowie die WebRTC-internen Komponenten G.711, G.722, FFT, Ooura FFT,
+  spl_sqrt_floor, Base64 und sigslot.

@@ -1,0 +1,13 @@
+Conversa
+Copyright 2026 Die Conversa-Autoren
+
+Dieses Produkt ist unter der Apache License, Version 2.0 lizenziert (siehe LICENSE).
+
+Es enthält Software Dritter. Copyright-Hinweise und vollständige Lizenztexte:
+  app/src/main/assets/licenses/NOTICES.txt
+  app/src/main/assets/licenses/apache-2.0.txt
+  app/src/main/assets/licenses/bouncycastle-mit.txt
+  app/src/main/assets/licenses/webrtc-bsd-3-clause.txt
+  app/src/main/assets/licenses/webrtc-third-party.txt
+
+Diese Texte sind auch in der App unter Einstellungen → Info → Open-Source-Lizenzen einsehbar.

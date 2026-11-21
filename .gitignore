@@ -1,0 +1,32 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+# Signaturschlüssel und Passwörter niemals veröffentlichen
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+/keys/
+# Build-Ergebnisse gehören in GitHub Releases, nicht ins Repository
+/app/release/
+/app/debug/
+*.apk
+*.aab
+mapping.txt
+# Persönliche IDE-Einstellungen
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
+/.idea/studiobot.xml
