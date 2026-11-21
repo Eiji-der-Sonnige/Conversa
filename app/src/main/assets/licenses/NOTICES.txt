@@ -53,7 +53,7 @@ NOTICE (OkHttp):
 MIT-Lizenz  (bouncycastle-mit.txt)
 -----------------------------------------------------------------
 Bouncy Castle Crypto (bcprov-jdk18on 1.80)
-  Copyright (c) 2000 - 2024 The Legion of the Bouncy Castle Inc.
+  Copyright (c) 2000-2023 The Legion of the Bouncy Castle Inc.
   (https://www.bouncycastle.org)
 
 

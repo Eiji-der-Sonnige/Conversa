@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen an Conversa. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unveröffentlicht]
+### Korrigiert
+- Copyright-Vermerk von Bouncy Castle wortgetreu nach der offiziellen Lizenz von Version 1.80 („2000-2023“)
+- Automatischer Build (GitHub Actions) repariert
+
 ## [1.2.0] – 2026-11-21 (Build 4)
 Erstes öffentliches Release auf GitHub.
 
