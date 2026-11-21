@@ -25,6 +25,14 @@ Sicherheitsupdate. Aktualisieren wird empfohlen.
 - Grenzen der 2FA und das Risiko von Offline-Rateangriffen werden offen beschrieben (README,
   Dokumentation, Nutzungsbedingungen). Datenschutzhinweise ergänzt um das Laden empfangener Medien.
 
+### Getestet (Emulator, Android 17, Release-Build)
+- Update über 1.2.1 (gleiche Signatur), Daten und 2FA bleiben erhalten
+- Anmeldung ohne Internet (Flugmodus) wird abgebrochen statt 2FA zu überspringen; online Anmeldung
+  inkl. 2FA in ca. 4 Sekunden
+- „Konto erstellen“ mit bestehenden Zugangsdaten erkennt das Konto, fragt 2FA ab und überschreibt nichts
+- Text zwischen zwei Konten, sehr lange Nachrichten (20.000 Zeichen), Bild wird nach Neuanmeldung wieder
+  geladen, Wiederherstellung von Kontakten und Verlauf
+
 ## [1.2.1] – 2026-11-21 (Build 5)
 ### Korrigiert
 - **Absturz beim Start** der Release-Version (v1.2.0) behoben: Die teilweise R8-Optimierung machte
