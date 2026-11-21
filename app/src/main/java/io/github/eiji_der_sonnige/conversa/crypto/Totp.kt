@@ -61,12 +61,12 @@ object Totp {
     }
 
     /** Prüft den Code mit ±30 s Toleranz, zeitkonstanter Vergleich. */
-    fun verify(secret: String, input: String): Boolean {
+    fun verify(secret: String, input: String, timeMillis: Long = System.currentTimeMillis()): Boolean {
         val c = input.filter(Char::isDigit)
         if (c.length != 6) return false
         var ok = false
         for (off in -1..1) {
-            if (MessageDigest.isEqual(code(secret, offset = off).toByteArray(), c.toByteArray())) ok = true
+            if (MessageDigest.isEqual(code(secret, timeMillis, off).toByteArray(), c.toByteArray())) ok = true
         }
         return ok
     }

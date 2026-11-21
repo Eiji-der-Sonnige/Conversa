@@ -137,7 +137,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _error.value = "Zu viele Fehlversuche. Bitte ${(totpLockedUntil - now) / 1000 + 1} s warten."
             return
         }
-        if (Totp.verify(st.secret, code)) {
+        if (checkTotp(st.secret, code)) {
             failedTotp = 0
             val m = _messenger.value ?: return
             viewModelScope.launch {
@@ -146,7 +146,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             failedTotp++
             if (failedTotp >= 5) totpLockedUntil = now + 30_000L * (1L shl minOf(failedTotp - 5, 6))
-            _error.value = "Falscher Code"
+            _error.value = "Falscher Code" + clockHint()
         }
     }
 
@@ -160,6 +160,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Prüft mit Netzwerkzeit (Relays) und zusätzlich mit der Geräteuhr. */
+    private fun checkTotp(secret: String, code: String): Boolean =
+        Totp.verify(secret, code, io.github.eiji_der_sonnige.conversa.core.NetworkTime.now()) || Totp.verify(secret, code)
+
+    private fun clockHint(): String {
+        val nt = io.github.eiji_der_sonnige.conversa.core.NetworkTime
+        val off = nt.offsetMillis / 1000
+        return when {
+            !nt.hasSamples -> " – noch keine Netzwerkzeit verfügbar, bitte kurz warten und erneut versuchen"
+            kotlin.math.abs(off) >= 30 -> " – deine Geräteuhr weicht um $off s ab (wird ausgeglichen)"
+            else -> ""
+        }
+    }
+
     // ---------------------------------------------------------------- 2FA-Einrichtung
 
     fun startTotpSetup() {
@@ -167,8 +181,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun confirmTotpSetup(secret: String, code: String) {
-        if (!Totp.verify(secret, code)) {
-            _error.value = "Code ungültig – Uhrzeit des Geräts prüfen"
+        if (!checkTotp(secret, code)) {
+            _error.value = "Code ungültig" + clockHint()
             return
         }
         _messenger.value?.setTotp(secret)
@@ -178,8 +192,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun disableTotp(code: String): Boolean {
         val m = _messenger.value ?: return false
         val secret = m.totpSecret.value ?: return true
-        if (!Totp.verify(secret, code)) {
-            _error.value = "Falscher Code"
+        if (!checkTotp(secret, code)) {
+            _error.value = "Falscher Code" + clockHint()
             return false
         }
         m.setTotp(null)

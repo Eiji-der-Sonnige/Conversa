@@ -15,7 +15,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Verhindert Screenshots, Bildschirmaufnahmen und Vorschau im App-Umschalter.
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        // Nur in Debug-Builds (nicht veröffentlicht) abgeschaltet, damit automatisierte UI-Tests möglich sind.
+        val debuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!debuggable) {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        }
         enableEdgeToEdge()
         setContent {
             ConversaTheme {

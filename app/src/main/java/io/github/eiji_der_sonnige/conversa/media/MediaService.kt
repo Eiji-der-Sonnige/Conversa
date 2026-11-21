@@ -61,28 +61,32 @@ class MediaService(
             "Upload"
         )
         val header = "Nostr " + Base64.getEncoder().encodeToString(auth.toJson().toString().toByteArray())
-        var lastError: Exception? = null
+        val errors = mutableListOf<String>()
         for (server in servers()) {
+            val base = server.trimEnd('/')
             try {
                 val req = Request.Builder()
-                    .url(server.trimEnd('/') + "/upload")
+                    .url("$base/upload")
                     .put(data.toRequestBody("application/octet-stream".toMediaType()))
                     .header("Authorization", header)
                     .header("X-SHA-256", hash)
                     .build()
                 http.newCall(req).execute().use { resp ->
                     if (!resp.isSuccessful) {
-                        throw IOException("$server: HTTP ${resp.code} ${resp.header("X-Reason").orEmpty()}")
+                        throw IOException("HTTP ${resp.code} ${resp.header("X-Reason").orEmpty()}".trim())
                     }
-                    val url = JSONObject(resp.body!!.string()).getString("url")
+                    val json = try { JSONObject(resp.body?.string().orEmpty()) } catch (e: Exception) { JSONObject() }
+                    // Manche Server liefern kein "url"-Feld; nach Blossom-Standard ist die Datei dann unter /<sha256> abrufbar.
+                    if (json.has("sha256") && json.optString("sha256") != hash) throw IOException("Prüfsumme abweichend")
+                    val url = json.optString("url").ifEmpty { "$base/$hash" }
                     require(url.startsWith("https://")) { "Unsichere URL" }
                     return@withContext url
                 }
             } catch (e: Exception) {
-                lastError = e
+                errors += "${base.removePrefix("https://")}: ${e.message}"
             }
         }
-        throw lastError ?: IOException("Kein Medien-Server konfiguriert")
+        throw IOException(if (errors.isEmpty()) "Kein Medien-Server konfiguriert" else errors.joinToString("; "))
     }
 
     private fun fetch(url: String): ByteArray? = try {

@@ -21,8 +21,8 @@ android {
         applicationId = "io.github.eiji_der_sonnige.conversa"
         minSdk = 33
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.2.0"
+        versionCode = 5
+        versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -41,9 +41,10 @@ android {
     buildTypes {
         release {
             if (!keystoreProps.isEmpty) signingConfig = signingConfigs.getByName("release")
+            // R8-Optimierung bewusst aus: Die teilweise Optimierung (packageScope) machte
+            // Kotlin-Klassen für den restlichen Code unzugänglich -> IllegalAccessError beim Start (v1.2.0).
             optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
+                enable = false
             }
         }
     }
@@ -59,6 +60,12 @@ android {
             excludes += setOf("META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/DEPENDENCIES")
         }
     }
+}
+
+tasks.withType<Test>().configureEach {
+    // Netzwerkprobe für Medien-Server nur auf ausdrücklichen Wunsch: -Pblossom.probe=true
+    systemProperty("blossom.probe", providers.gradleProperty("blossom.probe").getOrElse("false"))
+    testLogging { showStandardStreams = true }
 }
 
 dependencies {

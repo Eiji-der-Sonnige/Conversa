@@ -74,6 +74,9 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
 
     private inner class Listener(private val url: String) : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
+            io.github.eiji_der_sonnige.conversa.core.NetworkTime.addSample(
+                response.headers.getDate("Date"), response.sentRequestAtMillis, response.receivedResponseAtMillis
+            )
             connected[url] = true
             retries[url] = 0
             updateStatus()

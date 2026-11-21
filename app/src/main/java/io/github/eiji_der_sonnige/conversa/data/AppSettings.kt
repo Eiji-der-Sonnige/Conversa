@@ -27,17 +27,22 @@ data class AppSettings(
             "wss://nostr.mom",
             "wss://relay.snort.social",
         )
+        // Nur Server, die verschlüsselte (nicht erkennbare) Dateien annehmen – getestet am 21.11.2026.
         val DEFAULT_BLOSSOM = listOf(
-            "https://blossom.primal.net",
-            "https://blossom.band",
+            "https://nostr.download",
+            "https://blossom.yakihonne.com",
+            "https://files.sovbit.host",
         )
+        // Voreinstellung bis v1.2.0 – diese Server lehnen verschlüsselte Dateien ab (HTTP 415).
+        private val OLD_DEFAULT_BLOSSOM = listOf("https://blossom.primal.net", "https://blossom.band")
         private const val FILE = "settings.json"
 
         fun load(ctx: Context): AppSettings {
             val o = SecureFiles.readJson(ctx, FILE) ?: return AppSettings()
             return AppSettings(
                 relays = o.optJSONArray("relays")?.strings()?.takeIf { it.isNotEmpty() } ?: DEFAULT_RELAYS,
-                blossomServers = o.optJSONArray("blossom")?.strings()?.takeIf { it.isNotEmpty() } ?: DEFAULT_BLOSSOM,
+                blossomServers = o.optJSONArray("blossom")?.strings()
+                    ?.takeIf { it.isNotEmpty() && it != OLD_DEFAULT_BLOSSOM } ?: DEFAULT_BLOSSOM,
                 turnUrl = o.optString("turnUrl"),
                 turnUser = o.optString("turnUser"),
                 turnPass = o.optString("turnPass"),

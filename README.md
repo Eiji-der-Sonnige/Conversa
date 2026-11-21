@@ -47,7 +47,7 @@ Nicht-kommerzielles Open-Source-Hobbyprojekt · Apache License 2.0
 
 ## Server Dritter
 Die voreingestellten Relays (`relay.damus.io`, `nos.lol`, `relay.primal.net`, `nostr.mom`,
-`relay.snort.social`), Medien-Server (`blossom.primal.net`, `blossom.band`) und STUN-Server
+`relay.snort.social`), Medien-Server (`nostr.download`, `blossom.yakihonne.com`, `files.sovbit.host`) und STUN-Server
 (Google, Cloudflare) sind **austauschbare Voreinstellungen**. Sie werden von unabhängigen Dritten
 betrieben, nicht von diesem Projekt. Die Entwickler haben keinen Einfluss auf deren Verfügbarkeit,
 Inhalte oder Datenverarbeitung. Technisch bedingt sehen diese Server z. B. die IP-Adresse.

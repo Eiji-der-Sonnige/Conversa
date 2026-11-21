@@ -2,10 +2,25 @@
 
 Alle nennenswerten Änderungen an Conversa. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [Unveröffentlicht]
+## [1.2.1] – 2026-11-21 (Build 5)
 ### Korrigiert
+- **Absturz beim Start** der Release-Version (v1.2.0) behoben: Die teilweise R8-Optimierung machte
+  Kotlin-Klassen unzugänglich (`IllegalAccessError`). Die Optimierung ist für Release-Builds abgeschaltet.
+- **Bilder/Videos senden** schlug fehl: Die bisherigen Medien-Server lehnen verschlüsselte Dateien ab
+  (HTTP 415). Neue Voreinstellung: `nostr.download`, `blossom.yakihonne.com`, `files.sovbit.host`;
+  alte Voreinstellungen werden automatisch ersetzt. Fehlermeldungen nennen nun alle Server.
+- **2FA-Code abgelehnt** bei falsch gehender Geräteuhr: Conversa gleicht die Uhr jetzt mit der Zeit der
+  Relays ab und zeigt die erkannte Abweichung an.
 - Copyright-Vermerk von Bouncy Castle wortgetreu nach der offiziellen Lizenz von Version 1.80 („2000-2023“)
 - Automatischer Build (GitHub Actions) repariert
+
+### Geändert
+- Screenshot-Schutz nur noch in Release-Builds (Debug-Builds für automatisierte Tests)
+
+### Getestet (Emulator, Android 17)
+- Konto erstellen/anmelden, 2FA einrichten und abfragen (auch mit 5 Min. falscher Uhr), Text und Bild
+  zwischen zwei Konten über Relays/Blossom, Nachrichtenanfrage annehmen, Wiederherstellung von Kontakten,
+  2FA und Verlauf nach Neuinstallation, Videoanruf-Bildschirm mit Kamera
 
 ## [1.2.0] – 2026-11-21 (Build 4)
 Erstes öffentliches Release auf GitHub.

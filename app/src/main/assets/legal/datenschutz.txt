@@ -24,7 +24,7 @@ a) Nostr-Relays (voreingestellt: relay.damus.io, nos.lol, relay.primal.net, nost
 - Ende-zu-Ende-verschlüsselte Nachrichten-Hüllen („Gift Wraps“), die den öffentlichen Schlüssel des Empfängers enthalten, jedoch nicht den Absender, den Inhalt oder den genauen Zeitpunkt,
 - ein verschlüsseltes Konto-Event (Kontakte, 2FA-Einstellung), das nur mit dem eigenen Schlüssel lesbar ist, aber dem öffentlichen Schlüssel zugeordnet werden kann.
 
-b) Blossom-Medien-Server (voreingestellt: blossom.primal.net, blossom.band)
+b) Blossom-Medien-Server (voreingestellt: nostr.download, blossom.yakihonne.com, files.sovbit.host)
 - IP-Adresse und Zeitpunkt,
 - verschlüsselte Dateien, deren Prüfsumme (SHA-256) und Größe. Uploads werden mit einem Einmal-Schlüssel signiert und nicht dem Nostr-Konto zugeordnet.
 

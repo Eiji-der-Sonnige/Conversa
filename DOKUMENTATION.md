@@ -1,6 +1,6 @@
 # Conversa – Dokumentation
 
-**Version:** 1.2.0 (Build 4)
+**Version:** 1.2.1 (Build 5)
 **Plattform:** Android 13 (API 33) bis aktuelle Android-Versionen (targetSdk 37)
 **Stand:** 21.11.2026
 
@@ -193,6 +193,10 @@ Kontakt-ID = Bech32("npub", pubKey)
 
 - **Verfahren:** TOTP nach RFC 6238 (HMAC-SHA1, 6 Ziffern, 30 s), Geheimnis 160 Bit, Base32.
 - **Toleranz:** ±1 Zeitfenster (±30 s); zeitkonstanter Vergleich.
+- **Netzwerkzeit:** Authenticator-Apps korrigieren ihre Uhr oft selbst. Damit eine falsch gehende
+  Geräteuhr gültige Codes nicht ablehnt, ermittelt Conversa die Abweichung aus den `Date`-Headern der
+  Relays (über TLS) und prüft den Code mit der korrigierten Zeit sowie zusätzlich mit der Geräteuhr.
+  Bei einem falschen Code zeigt die App die erkannte Abweichung an.
 - **Brute-Force-Schutz:** Nach 5 Fehlversuchen Sperre von 30 s, danach exponentiell steigend.
 - **Speicherung:** Das Geheimnis liegt verschlüsselt (NIP-44, nur für dich lesbar) im Konto-Event auf den
   Relays und zusätzlich verschlüsselt im lokalen Speicher. Dadurch gilt 2FA auch auf neuen Geräten.
@@ -312,7 +316,7 @@ Jedes empfangene Event wird auf gültige ID und Signatur geprüft; ungültige we
 1. Auswahl über die Android-Fotoauswahl (max. 50 MB).
 2. Verschlüsselung mit einem zufälligen AES-256-GCM-Schlüssel und einer 12-Byte-Nonce.
 3. Upload des verschlüsselten Blobs per `PUT /upload` an einen Blossom-Server
-   (Standard-Voreinstellung: `blossom.primal.net`, `blossom.band`; von Dritten betrieben, in den
+   (Standard-Voreinstellung: `nostr.download`, `blossom.yakihonne.com`, `files.sovbit.host` – Server, die verschlüsselte Dateien annehmen; von Dritten betrieben, in den
    Einstellungen austauschbar). Die Autorisierung wird mit einem **Einmal-Schlüssel** signiert, sodass der
    Server den Upload nicht dem Nostr-Konto zuordnen kann. IP-Adresse, Zeitpunkt und Dateigröße sind für
    den Server dennoch sichtbar.
@@ -482,7 +486,7 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
 - **Krypto-Implementierung:** secp256k1 basiert auf Bouncy Castle und ist nicht garantiert
   „constant-time“. Kein unabhängiges Sicherheits-Audit.
 - **APK-Größe** ca. 113 MB (WebRTC für alle CPU-Architekturen).
-- Die App wurde bisher nur gebaut und per Unit-Tests geprüft, noch nicht umfassend auf Geräten getestet.
+- Getestet mit Unit-Tests und im Emulator (Android 17): Konten, 2FA, Text- und Bildversand zwischen zwei Konten, Wiederherstellung nach Neuinstallation, Anruf-Bildschirm. Ein echter Anruf zwischen zwei Geräten wurde noch nicht getestet.
 
 ---
 
@@ -531,6 +535,7 @@ RFC 6238, RFC 7539, RFC 5869, RFC 9106 (Argon2), Blossom BUD-01/02.
 
 | Version | Build | Änderungen |
 |---|---|---|
+| 1.2.1 | 5 | Absturz beim Start (R8) behoben; Medien-Server auf Server umgestellt, die verschlüsselte Dateien annehmen; 2FA gleicht falsch gehende Geräteuhr per Netzwerkzeit aus; im Emulator mit Android 17 getestet |
 | 1.2.0 | 4 | Ausrichtung als nicht-kommerzielles Open-Source-Hobbyprojekt (Apache 2.0, GitHub Releases): überarbeitete Nutzungsbedingungen (Eigenverantwortung der Nutzer, keine Gewährleistung, Haftung nach §§ 521, 523, 524 BGB), Datenschutzhinweise ohne Verantwortlichen-Angaben, Impressum entfernt, Zustimmung bei jeder Anmeldung, README/LICENSE/NOTICE/SECURITY.md, lokale Release-Signatur |
 | 1.1.1 | 3 | Nutzungsbedingungen, Datenschutzerklärung und Impressum in der App; Zustimmung bei Kontoerstellung; vollständige Open-Source-Lizenztexte und Copyright-Hinweise in der App; realistischere Formulierungen zu Anonymität und Sicherheit |
 | 1.1.0 | 2 | Neues App-Logo (adaptives Icon inkl. Monochrom), Logo im Login, eigenes Benachrichtigungssymbol, Info-Bereich in den Einstellungen mit Version, Geräte-, Sicherheitsinfos und Open-Source-Lizenzen |
