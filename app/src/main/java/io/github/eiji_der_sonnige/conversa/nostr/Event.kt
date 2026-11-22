@@ -42,7 +42,8 @@ data class Event(
     }
 
     companion object {
-        fun now(): Long = System.currentTimeMillis() / 1000
+        /** Aktuelle Zeit in Sekunden, korrigiert um die gemessene Abweichung der Geräteuhr. */
+        fun now(): Long = io.github.eiji_der_sonnige.conversa.core.NetworkTime.now() / 1000
 
         private fun StringBuilder.appendQuoted(s: String) {
             append('"')

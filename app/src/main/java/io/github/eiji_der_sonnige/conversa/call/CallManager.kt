@@ -87,7 +87,9 @@ class CallManager(
     private var isVideo = false
     private var pendingOffer: String? = null
     private var remoteDescSet = false
+    private var iceConnected = false
     private val pendingRemoteCandidates = mutableListOf<IceCandidate>()
+    private val earlyCandidates = HashMap<String, MutableList<IceCandidate>>()
     private val outgoingCandidates = mutableListOf<JSONObject>()
     private var candidateFlush: Job? = null
 
@@ -130,6 +132,7 @@ class CallManager(
         try {
             when (type) {
                 "offer" -> {
+                    if (cid.isEmpty() || (from == peer && cid == callId)) return@launch // Duplikat
                     if (_state.value != CallState.Idle) {
                         sendTo(from, cid, "busy", JSONObject())
                         return@launch
@@ -138,24 +141,37 @@ class CallManager(
                     callId = cid
                     isVideo = json.optBoolean("video")
                     pendingOffer = json.getString("sdp")
+                    // Kandidaten, die vor dem Angebot eingetroffen sind, übernehmen.
+                    earlyCandidates.remove(from + cid)?.let { pendingRemoteCandidates.addAll(it) }
+                    earlyCandidates.clear()
                     _state.value = CallState.Incoming(from, isVideo)
                     launch {
                         delay(45_000)
                         if (_state.value is CallState.Incoming && callId == cid) rejectInternal()
                     }
                 }
-                "answer" -> if (from == peer && cid == callId && pc != null) {
+                "answer" -> if (from == peer && cid == callId && pc != null && !remoteDescSet &&
+                    _state.value is CallState.Outgoing
+                ) {
                     pc!!.setRemoteS(SessionDescription(SessionDescription.Type.ANSWER, json.getString("sdp")))
                     remoteDescSet = true
                     drainRemoteCandidates()
-                    _state.value = CallState.Active(from, isVideo, false)
+                    becomeActive(from, isVideo)
                 }
-                "candidates" -> if (from == peer && cid == callId) {
+                "candidates" -> {
                     val arr = json.getJSONArray("list")
-                    for (i in 0 until arr.length()) {
+                    val list = (0 until minOf(arr.length(), 64)).map { i ->
                         val c = arr.getJSONObject(i)
-                        val cand = IceCandidate(c.getString("mid"), c.getInt("idx"), c.getString("c"))
-                        if (remoteDescSet && pc != null) pc!!.addIceCandidate(cand) else pendingRemoteCandidates.add(cand)
+                        IceCandidate(c.getString("mid"), c.getInt("idx"), c.getString("c"))
+                    }
+                    if (from == peer && cid == callId) {
+                        list.forEach { cand ->
+                            if (remoteDescSet && pc != null) pc!!.addIceCandidate(cand) else pendingRemoteCandidates.add(cand)
+                        }
+                    } else if (_state.value == CallState.Idle && cid.isNotEmpty()) {
+                        // Relays garantieren keine Reihenfolge: Kandidaten können vor dem Angebot ankommen.
+                        if (earlyCandidates.size > 8) earlyCandidates.clear()
+                        earlyCandidates.getOrPut(from + cid) { mutableListOf() }.addAll(list)
                     }
                 }
                 "hangup", "reject", "busy" -> if (from == peer && cid == callId) cleanup()
@@ -178,10 +194,24 @@ class CallManager(
             conn.setLocalS(answer)
             send("answer", JSONObject().put("sdp", answer.description))
             drainRemoteCandidates()
-            _state.value = CallState.Active(st.peer, st.video, false)
+            becomeActive(st.peer, st.video)
         } catch (e: Exception) {
             Log.e(TAG, "Annehmen fehlgeschlagen", e)
             hangupInternal()
+        }
+    }
+
+    /** Wechselt in den aktiven Zustand; kommt keine Verbindung zustande, wird nach 30 s aufgelegt. */
+    private fun becomeActive(peerPub: String, video: Boolean) {
+        _state.value = CallState.Active(peerPub, video, iceConnected)
+        val myCall = callId
+        scope.launch(dispatcher) {
+            delay(CONNECT_TIMEOUT_MS)
+            val s = _state.value
+            if (s is CallState.Active && !s.connected && callId == myCall) {
+                Log.w(TAG, "Keine Verbindung zustande gekommen – Anruf beendet")
+                hangupInternal()
+            }
         }
     }
 
@@ -299,8 +329,10 @@ class CallManager(
             scope.launch(dispatcher) {
                 when (newState) {
                     PeerConnection.IceConnectionState.CONNECTED,
-                    PeerConnection.IceConnectionState.COMPLETED ->
+                    PeerConnection.IceConnectionState.COMPLETED -> {
+                        iceConnected = true
                         (_state.value as? CallState.Active)?.let { _state.value = it.copy(connected = true) }
+                    }
                     PeerConnection.IceConnectionState.FAILED -> hangupInternal()
                     else -> Unit
                 }
@@ -343,6 +375,7 @@ class CallManager(
         outgoingCandidates.clear()
         pendingRemoteCandidates.clear()
         remoteDescSet = false
+        iceConnected = false
         pendingOffer = null
         _localVideo.value = null
         _remoteVideo.value = null
@@ -420,5 +453,6 @@ class CallManager(
 
     companion object {
         private const val TAG = "CallManager"
+        private const val CONNECT_TIMEOUT_MS = 30_000L
     }
 }

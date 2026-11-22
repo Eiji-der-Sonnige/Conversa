@@ -145,7 +145,10 @@ class Messenger(
         }
         when (r.kind) {
             GiftWrap.KIND_SIGNAL -> {
-                if (!fromMe && Event.now() - r.createdAt < 60 && store.contacts.value[peer]?.accepted == true) {
+                // Nur aktuelle Signale (alte Anrufangebote sollen nicht klingeln). Toleranz für
+                // abweichende Uhren beider Geräte, Event.now() ist bereits netzwerkkorrigiert.
+                val age = Event.now() - r.createdAt
+                if (!fromMe && age in -90..90 && store.contacts.value[peer]?.accepted == true) {
                     try { calls.onSignal(peer, JSONObject(r.content)) } catch (_: Exception) {}
                 }
             }

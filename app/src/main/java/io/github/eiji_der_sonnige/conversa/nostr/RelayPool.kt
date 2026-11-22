@@ -131,7 +131,11 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
                     Log.w(TAG, "Ungültige Signatur von $url verworfen")
                     return
                 }
-                synchronized(seen) { seen[key] = true }
+                // Atomar prüfen und eintragen: Jedes Relay hat einen eigenen Thread. Kommt dasselbe
+                // Event gleichzeitig von mehreren Relays, darf es trotzdem nur einmal weitergegeben werden
+                // (sonst wurde z. B. ein Anrufangebot doppelt verarbeitet und mit "besetzt" beantwortet).
+                val first = synchronized(seen) { seen.put(key, true) == null }
+                if (!first) return
                 _events.tryEmit(Incoming(url, subId, ev))
             }
             "EOSE" -> _eose.tryEmit(url to arr.optString(1))

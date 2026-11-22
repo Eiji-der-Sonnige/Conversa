@@ -2,6 +2,25 @@
 
 Alle nennenswerten Änderungen an Conversa. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.2.3] – 2026-11-22 (Build 7)
+Anrufe repariert. Aktualisieren wird empfohlen – **beide Gesprächspartner** brauchen 1.2.3.
+
+### Korrigiert
+- **Sprach- und Videoanrufe funktionierten nicht:** Der Anrufer legte sofort wieder auf, beim
+  Angerufenen blieb der Anruf nach dem Annehmen bei „Verbinde…“ hängen. Ursache: Kam das Anrufsignal
+  gleichzeitig von mehreren Relays an, wurde es doppelt verarbeitet und die zweite Kopie mit „besetzt“
+  beantwortet. Die Duplikatprüfung ist jetzt threadsicher, doppelte Angebote werden ignoriert.
+- Verbindungsdaten (ICE-Kandidaten), die vor dem Anrufangebot ankommen, gehen nicht mehr verloren.
+- Kommt nach dem Annehmen innerhalb von 30 Sekunden keine Verbindung zustande, wird der Anruf beendet
+  statt endlos „Verbinde…“ anzuzeigen.
+- Anrufsignale und Zeitstempel nutzen die mit den Relays abgeglichene Uhrzeit; eine falsch gehende
+  Handy-Uhr verhindert keine Anrufe mehr (Toleranz ±90 Sekunden).
+
+### Getestet (zwei Emulatoren gleichzeitig, Android 17, Release-Build)
+- Sprachanruf A → B und Videoanruf B → A: Verbindung kommt zustande und bleibt stabil (über 40 Sekunden)
+- Auflegen durch Anrufer oder Angerufenen beendet den Anruf auf beiden Seiten
+- Abbrechen während des Klingelns und Ablehnen funktionieren
+
 ## [1.2.2] – 2026-11-22 (Build 6)
 Sicherheitsupdate. Aktualisieren wird empfohlen.
 
