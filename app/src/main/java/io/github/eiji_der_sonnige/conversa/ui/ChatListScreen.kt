@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import io.github.eiji_der_sonnige.conversa.MainViewModel
 import io.github.eiji_der_sonnige.conversa.Screen
 import io.github.eiji_der_sonnige.conversa.core.Messenger
+import io.github.eiji_der_sonnige.conversa.data.MsgStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,7 +115,9 @@ fun ChatListScreen(vm: MainViewModel, m: Messenger) {
                         trailingContent = {
                             Column(horizontalAlignment = Alignment.End) {
                                 last?.let { Text(formatTime(it.createdAt), style = MaterialTheme.typography.labelSmall) }
+                                val unread = messages[c.pubHex].orEmpty().count { !it.fromMe && it.status == MsgStatus.RECEIVED }
                                 if (!c.accepted) Badge { Text("Neu") }
+                                else if (unread > 0) Badge { Text(if (unread > 99) "99+" else unread.toString()) }
                             }
                         }
                     )

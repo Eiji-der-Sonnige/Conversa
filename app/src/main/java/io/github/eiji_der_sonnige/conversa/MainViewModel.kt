@@ -4,7 +4,9 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.eiji_der_sonnige.conversa.core.ConnectionService
 import io.github.eiji_der_sonnige.conversa.core.Messenger
+import io.github.eiji_der_sonnige.conversa.core.Session
 import io.github.eiji_der_sonnige.conversa.crypto.Identity
 import io.github.eiji_der_sonnige.conversa.crypto.KeyDerivation
 import io.github.eiji_der_sonnige.conversa.crypto.Npub
@@ -37,8 +39,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _screen = MutableStateFlow<Screen>(Screen.Loading)
     val screen: StateFlow<Screen> = _screen
-    private val _messenger = MutableStateFlow<Messenger?>(null)
-    val messenger: StateFlow<Messenger?> = _messenger
+    private val _messenger get() = Session.messenger
+    val messenger: StateFlow<Messenger?> = Session.messenger
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy
     private val _error = MutableStateFlow<String?>(null)
@@ -52,19 +54,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch(Dispatchers.IO) {
             _settings.value = AppSettings.load(ctx)
-            val session = SecureFiles.readJson(ctx, SESSION)
-            if (session == null) {
+            // Läuft der Hintergrunddienst schon, wird dessen Verbindung übernommen.
+            val m = Session.restore(ctx)
+            if (m == null) {
                 _screen.value = Screen.Login
                 return@launch
             }
-            try {
-                val identity = Identity(session.getString("priv").hexToBytes(), session.getString("user"))
-                val m = startMessenger(identity)
-                val totp = m.store.totpSecret
-                _screen.value = if (totp != null) Screen.TotpVerify(totp, newSession = false) else Screen.Chats
-            } catch (e: Exception) {
-                _screen.value = Screen.Login
-            }
+            m.activeChat = null
+            val totp = m.store.totpSecret
+            _screen.value = if (totp != null) Screen.TotpVerify(totp, newSession = false) else Screen.Chats
+            if (_settings.value.background) ConnectionService.start(ctx)
         }
     }
 
@@ -72,16 +71,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _error.value = null
     }
 
-    private fun startMessenger(identity: Identity): Messenger {
-        _messenger.value?.stop()
-        val m = Messenger(ctx, identity, _settings.value)
-        m.start()
-        _messenger.value = m
-        return m
-    }
+    private fun startMessenger(identity: Identity): Messenger = Session.start(ctx, identity, _settings.value)
 
     fun setForeground(fg: Boolean) {
-        _messenger.value?.inForeground = fg
+        Session.setForeground(fg)
     }
 
     // ---------------------------------------------------------------- Anmeldung
@@ -117,8 +110,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } catch (e: Exception) {
                 // Halb angemeldeten Zustand nicht weiterlaufen lassen (keine Sitzung gespeichert).
-                withContext(Dispatchers.IO) { _messenger.value?.stop() }
-                _messenger.value = null
+                withContext(Dispatchers.IO) { Session.stop() }
                 _error.value = "Anmeldung fehlgeschlagen: ${e.message}"
             } finally {
                 _busy.value = false
@@ -128,9 +120,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun finishLogin(identity: Identity) {
         withContext(Dispatchers.IO) {
-            SecureFiles.writeJson(ctx, SESSION, JSONObject().put("priv", identity.privKey.toHex()).put("user", identity.username))
+            SecureFiles.writeJson(ctx, Session.FILE, JSONObject().put("priv", identity.privKey.toHex()).put("user", identity.username))
         }
         _screen.value = Screen.Chats
+        if (_settings.value.background) ConnectionService.start(ctx)
     }
 
     fun verifyTotp(code: String) {
@@ -155,8 +148,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun logout() {
         viewModelScope.launch(Dispatchers.IO) {
-            _messenger.value?.stop()
-            _messenger.value = null
+            ConnectionService.stop(ctx)
+            Session.stop()
             SecureFiles.wipeAll(ctx)
             _settings.value = AppSettings()
             _screen.value = Screen.Login
@@ -244,6 +237,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { m.resend(msg) }
     }
 
+    fun sendVoice(peer: String, file: java.io.File, durationMs: Long) {
+        val m = _messenger.value ?: return
+        viewModelScope.launch {
+            try { m.sendVoice(peer, file, durationMs) } catch (e: Exception) { _error.value = "Sprachnachricht fehlgeschlagen: ${e.message}" }
+        }
+    }
+
+    fun deleteMessages(peer: String, msgs: List<ChatMessage>, forEveryone: Boolean) {
+        val m = _messenger.value ?: return
+        viewModelScope.launch {
+            try { m.deleteMessages(peer, msgs, forEveryone) } catch (e: Exception) { _error.value = "Löschen fehlgeschlagen: ${e.message}" }
+        }
+    }
+
+    fun showError(msg: String) {
+        _error.value = msg
+    }
+
+    /** Einstellungen ohne Netzwerkbezug: werden sofort übernommen, ohne die Verbindungen neu aufzubauen. */
+    fun saveLocalSettings(readReceipts: Boolean, background: Boolean) {
+        val s = _settings.value.copy(readReceipts = readReceipts, background = background)
+        viewModelScope.launch(Dispatchers.IO) {
+            AppSettings.save(ctx, s)
+            _settings.value = s
+            _messenger.value?.settings = s
+            if (s.background) ConnectionService.start(ctx) else ConnectionService.stop(ctx)
+        }
+    }
+
     fun saveSettings(input: AppSettings) {
         val s = input.copy(
             relays = input.relays.ifEmpty { AppSettings.DEFAULT_RELAYS },
@@ -258,10 +280,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
-        _messenger.value?.stop()
-    }
-
-    companion object {
-        private const val SESSION = "session.json"
+        // Mit Hintergrundempfang läuft die Verbindung weiter, sonst wird sie beim Schließen der App beendet.
+        if (!_settings.value.background) Session.stop()
     }
 }

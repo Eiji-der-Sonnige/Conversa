@@ -12,12 +12,17 @@ data class AppSettings(
     val turnPass: String = "",
     val relayOnlyCalls: Boolean = false,
     val useTor: Boolean = false,
+    /** Lesebestätigungen senden (und die der anderen anzeigen) – wie bei gängigen Messengern gegenseitig. */
+    val readReceipts: Boolean = true,
+    /** Hintergrunddienst: bleibt mit den Relays verbunden, auch wenn die App nicht geöffnet ist. */
+    val background: Boolean = false,
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("relays", JSONArray(relays))
         .put("blossom", JSONArray(blossomServers))
         .put("turnUrl", turnUrl).put("turnUser", turnUser).put("turnPass", turnPass)
         .put("relayOnly", relayOnlyCalls).put("tor", useTor)
+        .put("receipts", readReceipts).put("background", background)
 
     companion object {
         val DEFAULT_RELAYS = listOf(
@@ -48,6 +53,8 @@ data class AppSettings(
                 turnPass = o.optString("turnPass"),
                 relayOnlyCalls = o.optBoolean("relayOnly"),
                 useTor = o.optBoolean("tor"),
+                readReceipts = o.optBoolean("receipts", true),
+                background = o.optBoolean("background", false),
             )
         }
 

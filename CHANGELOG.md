@@ -2,6 +2,49 @@
 
 Alle nennenswerten Änderungen an Conversa. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.3.0] – 2026-11-27 (Build 8)
+Neue Funktionen: Sprachnachrichten, Löschen, Lesebestätigungen und Empfang im Hintergrund.
+„Für alle löschen“ und Lesebestätigungen funktionieren nur, wenn **beide** Gesprächspartner 1.3.0 nutzen.
+
+### Neu
+- **Sprachnachrichten:** Bei leerem Textfeld erscheint ein Mikrofon. Aufnahme bis 5 Minuten, verwerfen oder
+  senden; Wiedergabe mit Fortschrittsbalken und Längenanzeige. Verschlüsselt wie Bilder (AES-256-GCM).
+- **Nachrichten löschen:** Lange auf eine Nachricht tippen → „Für mich löschen“ (auf allen eigenen Geräten,
+  auch nach Neuanmeldung) oder bei eigenen Nachrichten „Für alle löschen“. Niemand kann fremde Nachrichten
+  beim anderen löschen. Außerdem „Text kopieren“.
+- **Zustellstatus:** ✓ übermittelt, ✓✓ (blau) gelesen. Lesebestätigungen lassen sich abschalten; dann sieht
+  man auch die der anderen nicht. An Nachrichtenanfragen werden nie Bestätigungen gesendet.
+- **Ungelesen-Zähler** in der Chatliste.
+- **Im Hintergrund empfangen (optional, Einstellungen):** Conversa bleibt mit den Relays verbunden, auch
+  wenn die App geschlossen ist oder das Handy im Standby liegt, und startet nach einem Neustart des Handys
+  oder einem Update wieder. Kein Google-Dienst. Vor dem Einschalten erklärt die App den Akkuverbrauch
+  (Schätzung 1–5 % pro Tag). Optional lässt sich die Akku-Optimierung ausschalten.
+- **Eingehende Anrufe** klingeln jetzt auch, wenn die App im Hintergrund ist, und öffnen bei ausgeschaltetem
+  Bildschirm den Anrufbildschirm (Benachrichtigung mit „Öffnen“ und „Ablehnen“).
+
+### Verbessert
+- Verbindungsprüfung gebündelt für alle Relays (spart Akku), im Hintergrund seltener; nach einem
+  Netzwechsel (WLAN ↔ Mobilfunk) wird sofort neu verbunden.
+- Nach einer Neuverbindung wird nicht mehr der komplette Verlauf erneut angefordert.
+
+### Korrigiert
+- Eine als fehlgeschlagen (⚠) markierte Nachricht, die doch noch zugestellt wurde, wechselt jetzt auf ✓.
+  „Erneut senden“ erzeugt keine Duplikate mehr.
+- Ein erneut synchronisierter Verlauf setzt den Status nicht mehr zurück.
+- Anrufsignale oder andere Steuerdaten von Unbekannten legen keine leere Nachrichtenanfrage mehr an.
+- Beim Start eines Anrufs mit offener Tastatur verdeckte diese die Anrufknöpfe.
+- Eingehende Anrufe blieben unbemerkt, wenn die App im Hintergrund war.
+
+### Getestet (zwei Emulatoren, Android 17)
+- Update von 1.2.1 auf 1.3.0 (Release-Build): Sitzung und 2FA-Abfrage bleiben erhalten
+- ✓ beim Senden, ✓✓ sobald der Empfänger den Chat öffnet; Ungelesen-Zähler
+- Sprachnachricht aufnehmen, senden, beim Empfänger abspielen (stumme Aufnahme, Emulator ohne Mikrofon)
+- „Für alle löschen“ entfernt die Nachricht auf beiden Seiten; „Für mich löschen“ nur lokal; beides bleibt
+  nach App-Neustart und nach Ab- und Neuanmeldung gelöscht; ✓✓ bleibt nach Neustart erhalten
+- Hintergrundempfang: App geschlossen, Bildschirm aus, Doze-Tiefschlaf erzwungen → Nachricht löst
+  Benachrichtigung aus; Anruf weckt das Gerät und zeigt den Anrufbildschirm, Gespräch kommt zustande
+- Hintergrunddienst startet nach App-Update von selbst wieder
+
 ## [1.2.3] – 2026-11-22 (Build 7)
 Anrufe repariert. Aktualisieren wird empfohlen – **beide Gesprächspartner** brauchen 1.2.3.
 

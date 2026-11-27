@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa.nostr
 
+import android.os.SystemClock
 import android.util.Log
 import io.github.eiji_der_sonnige.conversa.crypto.randomBytes
 import io.github.eiji_der_sonnige.conversa.crypto.toHex
@@ -41,6 +42,10 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
     }
     @Volatile private var closed = false
 
+    /** Zeitpunkt der letzten Daten bzw. des letzten Herzschlags je Relay (elapsedRealtime, ms). */
+    private val lastActivity = ConcurrentHashMap<String, Long>()
+    private val lastPing = ConcurrentHashMap<String, Long>()
+
     private val _events = MutableSharedFlow<Incoming>(extraBufferCapacity = 1024)
     val events: SharedFlow<Incoming> = _events
     private val _eose = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 128)
@@ -79,12 +84,17 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
             )
             connected[url] = true
             retries[url] = 0
+            lastActivity[url] = SystemClock.elapsedRealtime()
+            lastPing.remove(url)
             updateStatus()
             subs.forEach { (id, f) -> webSocket.send(reqMessage(id, f)) }
             pending.forEach { webSocket.send(it) }
         }
 
-        override fun onMessage(webSocket: WebSocket, text: String) = handle(url, text)
+        override fun onMessage(webSocket: WebSocket, text: String) {
+            lastActivity[url] = SystemClock.elapsedRealtime()
+            handle(url, text)
+        }
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
             webSocket.close(1000, null)
@@ -150,6 +160,48 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
         }
     }
 
+    /**
+     * Herzschlag für alle Relays gleichzeitig (ein Funk-Aufwachen statt mehrerer versetzter). Ersetzt die
+     * WebSocket-Pings von OkHttp, deren Takt sich nicht ändern lässt. Ein Relay, das seit dem letzten
+     * Herzschlag gar nichts gesendet hat, gilt als tot (z. B. nach Netzwechsel) und wird neu verbunden.
+     * Als Herzschlag dient eine Abfrage, die nie Treffer hat; jedes Relay antwortet darauf mit EOSE.
+     */
+    fun heartbeat() {
+        if (closed) return
+        val now = SystemClock.elapsedRealtime()
+        sockets.forEach { (url, ws) ->
+            if (connected[url] != true) return@forEach
+            val pinged = lastPing[url]
+            val active = lastActivity[url] ?: 0L
+            if (pinged != null && active < pinged && now - pinged > PING_TIMEOUT_MS) {
+                Log.i(TAG, "$url antwortet nicht mehr – neu verbinden")
+                ws.cancel() // löst onFailure -> down() -> Neuverbindung aus
+                return@forEach
+            }
+            if (pinged == null || now - pinged > PING_TIMEOUT_MS) {
+                lastPing[url] = now
+                ws.send(HEARTBEAT)
+            }
+        }
+    }
+
+    /** Nach einem Netzwechsel: getrennte Relays sofort statt erst nach Ablauf der Wartezeit verbinden. */
+    fun reconnectNow() {
+        if (closed) return
+        urls.forEach { url ->
+            if (!sockets.containsKey(url)) {
+                retries[url] = 0
+                open(url)
+            }
+        }
+        heartbeat()
+    }
+
+    /** Ändert den Filter eines Abos für künftige (Neu-)Verbindungen, ohne ihn jetzt erneut zu senden. */
+    fun updateFilters(id: String, filters: List<JSONObject>) {
+        if (subs.containsKey(id)) subs[id] = filters
+    }
+
     fun subscribe(id: String, filters: List<JSONObject>) {
         subs[id] = filters
         val msg = reqMessage(id, filters)
@@ -212,5 +264,8 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
 
     companion object {
         private const val TAG = "RelayPool"
+        private const val PING_TIMEOUT_MS = 20_000L
+        private val HEARTBEAT = JSONArray().put("REQ").put("hb")
+            .put(JSONObject().put("ids", JSONArray().put("0".repeat(64))).put("limit", 1)).toString()
     }
 }

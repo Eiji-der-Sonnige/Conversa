@@ -18,6 +18,10 @@ object GiftWrap {
     const val KIND_FILE = 15
     const val KIND_WRAP = 1059
     const val KIND_SIGNAL = 25050
+    /** Löschung (Semantik wie NIP-09, aber verschlüsselt im Gift Wrap): Tags ["e", <Nachrichten-ID>]. */
+    const val KIND_DELETE = 5
+    /** Conversa-eigene Lesebestätigung: Tags ["e", <Nachrichten-ID>], Inhalt "read". */
+    const val KIND_RECEIPT = 25051
 
     private fun randomPast(): Long = Event.now() - secureRandom.nextInt(2 * 24 * 3600)
 

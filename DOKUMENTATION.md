@@ -1,17 +1,17 @@
 # Conversa – Dokumentation
 
-**Version:** 1.2.1 (Build 5)
+**Version:** 1.3.0 (Build 8)
 **Plattform:** Android 13 (API 33) bis aktuelle Android-Versionen (targetSdk 37)
-**Stand:** 21.11.2026
+**Stand:** 27.11.2026
 
 Conversa ist ein dezentraler Messenger, der auf Anonymität und Ende-zu-Ende-Verschlüsselung ausgelegt
-ist. Er unterstützt Textnachrichten, Bilder, Videos sowie Sprach- und Videoanrufe. Conversa ist ein nicht-kommerzielles Open-Source-Hobbyprojekt (Apache License 2.0). Die Entwickler betreiben
+ist. Er unterstützt Textnachrichten, Bilder, Videos, Sprachnachrichten sowie Sprach- und Videoanrufe. Conversa ist ein nicht-kommerzielles Open-Source-Hobbyprojekt (Apache License 2.0). Die Entwickler betreiben
 keinen eigenen Server; für die Registrierung sind keine E-Mail-Adresse und keine Telefonnummer nötig.
 
 > **Wichtiger Hinweis:** Vollständige Anonymität und absolute Sicherheit können nicht garantiert werden.
 > Externe Relays, Medien- und STUN-Server sehen technisch bedingt Verbindungsdaten wie die IP-Adresse.
-> Textnachrichten haben keine Forward Secrecy, und die Software wurde bisher nur gebaut und mit
-> Unit-Tests geprüft, aber keinem unabhängigen Sicherheits-Audit unterzogen. Die Nutzung erfolgt auf
+> Textnachrichten haben keine Forward Secrecy, und die Software wurde mit Unit-Tests sowie auf Emulatoren
+> und Geräten getestet, aber keinem unabhängigen Sicherheits-Audit unterzogen. Die Nutzung erfolgt auf
 > eigenes Risiko. Details: [Abschnitt 17](#17-bekannte-einschränkungen) und [Abschnitt 21](#21-rechtliches).
 
 ---
@@ -27,7 +27,7 @@ keinen eigenen Server; für die Registrierung sind keine E-Mail-Adresse und kein
 7. [Kryptografie](#7-kryptografie)
 8. [Netzwerk & Protokoll](#8-netzwerk--protokoll)
 9. [Nachrichtenfluss](#9-nachrichtenfluss)
-10. [Bilder & Videos](#10-bilder--videos)
+10. [Bilder, Videos & Sprachnachrichten](#10-bilder-videos--sprachnachrichten)
 11. [Sprach- & Videoanrufe](#11-sprach---videoanrufe)
 12. [Datenspeicherung](#12-datenspeicherung)
 13. [Sicherheitsmaßnahmen](#13-sicherheitsmaßnahmen)
@@ -50,6 +50,10 @@ keinen eigenen Server; für die Registrierung sind keine E-Mail-Adresse und kein
 | 2FA | TOTP, kompatibel mit Google Authenticator; Abfrage bei Login und App-Start |
 | Textchat | Ende-zu-Ende-verschlüsselt (NIP-44), Metadaten verborgen (Gift Wrap) |
 | Bilder & Videos | Lokal mit AES-256-GCM verschlüsselt, bis 50 MB pro Datei |
+| Sprachnachrichten | Aufnahme bis 5 Minuten (AAC), verschlüsselt wie Bilder; Wiedergabe mit Fortschrittsbalken |
+| Löschen | Jede Nachricht „für mich“ oder (eigene) „für alle“ löschbar; gilt auch nach Neuanmeldung |
+| Zustellstatus | ✓ übermittelt, ✓✓ gelesen (Lesebestätigungen abschaltbar, gegenseitig); Zähler für Ungelesenes |
+| Hintergrundempfang | Optional: Verbindung bleibt auch bei geschlossener App und im Standby bestehen (ohne Google-Dienste) |
 | Sprach- & Videoanrufe | WebRTC Peer-to-Peer, DTLS-SRTP-verschlüsselt |
 | Dezentralität | Mehrere unabhängige Nostr-Relays; Medien auf Blossom-Servern (austauschbare Voreinstellungen, von Dritten betrieben) |
 | Multi-Device | Gleiche Zugangsdaten = gleiches Konto; Verlauf und Kontakte werden synchronisiert, soweit die Relays sie speichern |
@@ -83,7 +87,15 @@ werden aus dem Netzwerk geladen (soweit die Relays sie noch speichern).
 ### 2.4 Chatten
 - Text eingeben und auf **Senden** tippen.
 - **Büroklammer**: Bild oder Video auswählen (Android-Fotoauswahl, keine Speicherberechtigung nötig).
-- Statusanzeige: ⏳ wird gesendet · ✓ von mindestens einem Relay bestätigt · ⚠ fehlgeschlagen (antippen = erneut senden).
+- **Mikrofon** (erscheint, solange das Textfeld leer ist): Sprachnachricht aufnehmen. Während der Aufnahme
+  läuft ein Zähler; **Papierkorb** verwirft, **Senden** verschickt sie. Nach 5 Minuten wird automatisch gesendet.
+  Verlässt man die App während der Aufnahme, wird sie verworfen.
+- Statusanzeige: 🕓 wird gesendet · ✓ übermittelt (von mindestens einem Relay angenommen) · ✓✓ (blau)
+  gelesen · ⚠ fehlgeschlagen (antippen = erneut senden).
+- **Lange auf eine Nachricht tippen**: Text kopieren oder löschen. „Für mich löschen“ entfernt sie auf
+  allen eigenen Geräten, „Für alle löschen“ (nur eigene, bereits übermittelte Nachrichten) zusätzlich beim
+  Gesprächspartner.
+- In der Chatliste zeigt eine Zahl die ungelesenen Nachrichten.
 - Menü (⋮): Kontakt umbenennen oder Kontakt und Chat löschen.
 
 ### 2.5 Anrufen
@@ -94,7 +106,21 @@ Mikrofon, Kamera, Kamerawechsel, Lautsprecher und Auflegen zur Verfügung. Ein A
 **Einstellungen → Zwei-Faktor-Authentifizierung → „2FA aktivieren“**, dann QR-Code mit Google Authenticator
 scannen (oder „In Authenticator-App öffnen“ bzw. den Schlüssel manuell eingeben) und den 6-stelligen Code bestätigen.
 
-### 2.7 Abmelden
+### 2.7 Im Hintergrund empfangen
+**Einstellungen → Privatsphäre & Empfang → „Im Hintergrund verbunden bleiben“.** Vor dem Einschalten
+erklärt ein Hinweis den Akkuverbrauch. Danach bleibt Conversa mit den Relays verbunden, auch wenn die App
+geschlossen ist, das Handy im Standby liegt oder neu gestartet wurde. Android zeigt dafür einen dauerhaften
+Hinweis „Conversa empfängt im Hintergrund“ an (in den Systemeinstellungen ausblendbar). Eingehende Anrufe
+klingeln und öffnen den Anrufbildschirm.
+
+Optional kann man Conversa von der Akku-Optimierung ausnehmen. Das ist vor allem bei Herstellern nötig,
+die Hintergrund-Apps besonders aggressiv beenden (z. B. Xiaomi, Huawei, teils Samsung).
+
+**Akkuverbrauch (Schätzung, nicht gemessen):** etwa 1–5 % pro Tag zusätzlich, abhängig von Gerät,
+Netz (WLAN ist sparsamer als Mobilfunk) und Nachrichtenmenge. Ohne die Option kommen Nachrichten nur an,
+solange die App geöffnet ist oder noch kurz im Hintergrund läuft.
+
+### 2.8 Abmelden
 **Einstellungen → „Abmelden & lokale Daten löschen“** löscht alle lokalen Daten und den Keystore-Schlüssel.
 
 ---
@@ -133,7 +159,7 @@ Schlüssel des Empfängers.
 
 ```
 app/src/main/java/io/github/eiji_der_sonnige/conversa/
-├── ConversaApp.kt            Application (Benachrichtigungskanal)
+├── ConversaApp.kt            Application (Benachrichtigungskanäle)
 ├── MainActivity.kt           Activity, FLAG_SECURE, Vordergrund-Status
 ├── MainViewModel.kt          Bildschirme, Login, 2FA, Einstellungen
 ├── crypto/
@@ -153,16 +179,20 @@ app/src/main/java/io/github/eiji_der_sonnige/conversa/
 │   ├── ChatStore.kt          Kontakte & Nachrichten (verschlüsselt)
 │   ├── SecureFiles.kt        Verschlüsselte Dateien, sicheres Löschen
 │   └── AppSettings.kt        Relays, Medien-Server, TURN, Tor
-├── media/MediaService.kt     Verschlüsselung, Upload/Download (Blossom)
+├── media/
+│   ├── MediaService.kt       Verschlüsselung, Upload/Download (Blossom)
+│   └── VoiceRecorder.kt      Sprachaufnahme (AAC/M4A, max. 5 min)
 ├── call/CallManager.kt       WebRTC-Anrufe, Signalisierung
 ├── core/
-│   ├── Messenger.kt          Senden/Empfangen, Kontosynchronisation
-│   └── Notifier.kt           Benachrichtigungen ohne Inhalt
+│   ├── Messenger.kt          Senden/Empfangen, Löschen, Lesebestätigungen, Kontosynchronisation
+│   ├── Session.kt            App-weit laufender Messenger (unabhängig von der Activity)
+│   ├── ConnectionService.kt  Optionaler Hintergrunddienst, Herzschlag-Wecker, Neustart nach Boot/Update
+│   └── Notifier.kt           Benachrichtigungen ohne Inhalt (Nachrichten, Anrufe, Dienst)
 └── ui/                       Compose-Bildschirme
     ├── Root.kt, LoginScreen.kt, TotpScreens.kt, ChatListScreen.kt,
-    ├── ChatScreen.kt, CallScreen.kt, SettingsScreen.kt, Common.kt
+    ├── ChatScreen.kt, VoiceUi.kt, CallScreen.kt, SettingsScreen.kt, Common.kt
 
-app/src/test/java/io/github/eiji_der_sonnige/conversa/CryptoTest.kt   Krypto-Unit-Tests
+app/src/test/java/io/github/eiji_der_sonnige/conversa/               Unit-Tests (Krypto, Mediendaten, Nachrichtenstatus)
 app/src/main/res/xml/network_security_config.xml       Nur TLS
 app/src/main/res/xml/data_extraction_rules.xml         Keine Backups
 ```
@@ -288,7 +318,9 @@ falls gerade keines erreichbar ist.
 | 1059 | Gift Wrap (Hülle für alles Private) | nur Empfänger-Schlüssel |
 | 13 | Seal (innerhalb des Gift Wrap) | nein |
 | 14 | Textnachricht (Rumor) | nein |
-| 15 | Datei/Bild/Video (Rumor) | nein |
+| 15 | Datei/Bild/Video/Sprachnachricht (Rumor; Sprachnachrichten mit zusätzlichem Tag `duration` in ms) | nein |
+| 5 | Löschung (Rumor, Tags `["e", <Nachrichten-ID>]`), an sich selbst und bei „für alle“ an den Partner | nein |
+| 25051 | Lesebestätigung (Rumor, Tags `["e", <ID>]`), nur an den Partner, Gift Wrap läuft nach 30 Tagen ab | nein |
 | 25050 | Anruf-Signalisierung (Rumor), Gift Wrap läuft nach 120 s ab | nein |
 | 30078 | Konto-Daten (Kontakte, 2FA), NIP-44 an sich selbst | nur Autor; d-Tag ist ein undurchsichtiger Hash |
 | 24242 | Blossom-Upload-Autorisierung (Einmal-Schlüssel) | nur Medien-Server |
@@ -297,8 +329,16 @@ falls gerade keines erreichbar ist.
 ```json
 ["REQ", "inbox", {"kinds":[1059], "#p":["<eigener pubkey>"], "since": <letzte Sync − 3 Tage>}]
 ```
-Beim ersten Login ohne `since`, dafür mit `limit: 2000`, um den Verlauf wiederherzustellen.
+Beim ersten Login ohne `since`, dafür mit `limit: 2000`, um den Verlauf wiederherzustellen. Der Filter
+wird jede Minute fortgeschrieben, damit eine Neuverbindung nicht erneut den ganzen Verlauf anfordert.
 Jedes empfangene Event wird auf gültige ID und Signatur geprüft; ungültige werden verworfen.
+
+**Verbindungsprüfung (Herzschlag):** Statt eigener WebSocket-Pings je Relay sendet Conversa an alle Relays
+gleichzeitig eine Abfrage ohne Treffer (`["REQ","hb",{"ids":["000…"],"limit":1}]`), die jedes Relay mit
+`EOSE` beantwortet. Kommt bis zum nächsten Herzschlag keine Antwort, wird das Relay neu verbunden. Takt:
+30 s im Vordergrund, 4 min im Hintergrund (zusätzlich ein Android-Wecker alle 5 min, weil Timer im
+Tiefschlaf stehen bleiben). Gebündelte Herzschläge lassen das Funkmodul zwischendurch schlafen. Nach einem
+Netzwechsel (z. B. WLAN → Mobilfunk) wird sofort neu verbunden.
 
 ---
 
@@ -308,17 +348,33 @@ Jedes empfangene Event wird auf gültige ID und Signatur geprüft; ungültige we
 1. Rumor erzeugen, lokal mit Status `SENDING` speichern.
 2. Zwei Gift Wraps erzeugen: einen für den Empfänger, einen für sich selbst (für Multi-Device-Verlauf).
 3. An alle Relays senden.
-4. Bestätigt ein Relay (`OK`), wird der Status `SENT` (✓). Nach 20 s ohne Bestätigung: `FAILED`.
+4. Bestätigt ein Relay (`OK`), wird der Status `SENT` (✓). Nach 20 s ohne Bestätigung: `FAILED`. Kommt die
+   Bestätigung später doch noch (gepufferte Events werden nach einer Neuverbindung erneut gesendet), wird
+   aus `FAILED` wieder `SENT`. „Erneut senden“ verschickt dieselben Events, damit keine Duplikate entstehen.
+5. Liest der Partner die Nachricht, schickt seine App eine Lesebestätigung: Status `READ` (✓✓). Status
+   werden nur „hochgestuft“; eine erneut synchronisierte Kopie setzt ✓✓ nicht auf ✓ zurück.
 
 **Empfangen**
 1. Gift Wrap entpacken und prüfen.
-2. Unbekannter Absender: Kontakt als „Nachrichtenanfrage“ (`accepted = false`) anlegen.
-3. Nachricht speichern (Duplikate werden über die Rumor-ID erkannt).
-4. Benachrichtigung ohne Inhalt und Absender, falls der Chat nicht offen ist.
+2. Unbekannter Absender: Nur Text- und Dateinachrichten legen einen Kontakt als „Nachrichtenanfrage“
+   (`accepted = false`) an. Anrufsignale, Lesebestätigungen und Löschungen von Unbekannten werden verworfen.
+3. Nachricht speichern (Duplikate werden über die Rumor-ID erkannt, gelöschte IDs ignoriert).
+4. Ist der Chat offen und die App sichtbar: als gelesen markieren und (falls eingeschaltet) Lesebestätigung
+   senden. Sonst: Benachrichtigung ohne Inhalt und Absender.
+
+**Löschen**
+- „Für mich“: Die Nachricht wird lokal entfernt, ihre ID dauerhaft als gelöscht gemerkt (sonst käme sie bei
+  der nächsten Synchronisierung zurück) und eine Löschung (Kind 5) verschlüsselt an sich selbst gesendet –
+  so gilt sie auch auf anderen Geräten und nach einer Neuanmeldung. Zwischengespeicherte Medien werden entfernt.
+- „Für alle“: zusätzlich geht die Löschung an den Partner. Dessen App entfernt nur Nachrichten, die der
+  Absender der Löschung selbst geschrieben hat – niemand kann fremde Nachrichten beim anderen löschen.
+
+**Lesebestätigungen** werden nur an angenommene Kontakte gesendet, nie an Nachrichtenanfragen, und nur
+für Nachrichten der letzten 30 Tage. Wer sie abschaltet, sieht auch die der anderen nicht.
 
 ---
 
-## 10. Bilder & Videos
+## 10. Bilder, Videos & Sprachnachrichten
 
 1. Auswahl über die Android-Fotoauswahl (max. 50 MB).
 2. Verschlüsselung mit einem zufälligen AES-256-GCM-Schlüssel und einer 12-Byte-Nonce.
@@ -332,6 +388,13 @@ Jedes empfangene Event wird auf gültige ID und Signatur geprüft; ungültige we
 5. Beim Empfang: Download (Fallback über alle konfigurierten Server per SHA-256), Integritätsprüfung,
    Entschlüsselung. Bilder werden im Speicher entschlüsselt, Videos zur Wiedergabe kurzzeitig in den
    privaten App-Cache (`media_tmp`, wird bei jedem Start gelöscht).
+
+**Sprachnachrichten** werden mit dem Mikrofon als AAC (Mono, 44,1 kHz, 48 kbit/s, ca. 360 KB pro Minute) in
+den privaten Cache aufgenommen, genau wie Bilder verschlüsselt und hochgeladen und danach lokal gelöscht.
+Sie haben den MIME-Typ `audio/mp4` und zusätzlich das Tag `duration` (Länge in ms), damit die Länge schon vor
+dem Laden angezeigt wird. Abgespielt wird immer nur eine Sprachnachricht gleichzeitig; die entschlüsselte
+Datei wird nach der Wiedergabe gelöscht. Bei Nachrichtenanfragen wird – wie bei Bildern – erst nach Tippen
+geladen.
 
 ---
 
@@ -366,10 +429,11 @@ Kontakten werden ignoriert.
 | Nostr-Relays | Gift Wraps (Nachrichten), Konto-Event | NIP-44 / Gift Wrap |
 | Blossom-Server | Mediendateien | AES-256-GCM |
 | `files/secure/session.json` | privater Schlüssel, Benutzername | Keystore AES-256-GCM |
-| `files/secure/chats_<id>.json` | Kontakte, Nachrichten, 2FA-Cache, Sync-Zeitpunkt | Keystore AES-256-GCM |
+| `files/secure/chats_<id>.json` | Kontakte, Nachrichten samt Status, IDs gelöschter Nachrichten, 2FA-Cache, Sync-Zeitpunkt | Keystore AES-256-GCM |
 | `files/secure/settings.json` | Netzwerkeinstellungen | Keystore AES-256-GCM |
 | `cache/media_enc/` | heruntergeladene Medien (verschlüsselt) | AES-256-GCM |
-| `cache/media_tmp/` | entschlüsselte Videos zur Wiedergabe | App-Sandbox, wird beim Start gelöscht |
+| `cache/media_tmp/` | entschlüsselte Videos/Sprachnachrichten zur Wiedergabe | App-Sandbox, wird nach der Wiedergabe bzw. beim Start gelöscht |
+| `cache/voice_tmp/` | eigene Aufnahme bis zum Senden | App-Sandbox, wird nach Senden/Verwerfen gelöscht |
 
 Dateien werden atomar geschrieben (`AtomicFile`). Beim Abmelden werden alle Verzeichnisse und der
 Keystore-Schlüssel gelöscht.
@@ -406,12 +470,14 @@ Die folgenden Maßnahmen reduzieren Risiken, schließen sie aber nicht vollstän
 |---|---|
 | Deine Kontakt-ID | npub als QR-Code und Text, kopieren |
 | 2FA | aktivieren / deaktivieren |
+| Privatsphäre & Empfang | Lesebestätigungen senden (Standard: an); im Hintergrund verbunden bleiben (Standard: aus, mit Akku-Hinweis); Akku-Optimierung ausschalten |
 | Netzwerk | Relay-Liste (`wss://`), Medien-Server (`https://`), Tor über Orbot (SOCKS `127.0.0.1:9050`) |
 | Anrufe | TURN-URL, -Benutzer, -Passwort; „Nur über TURN“ |
 | Info | Version, Build, Gerät, Android-Version, Installations-/Update-Datum, Paketname, Relay-Status, Verschlüsselungsverfahren, Open-Source-Lizenzen |
 | Abmelden | löscht alle lokalen Daten |
 
 Nach dem Speichern der Netzwerkeinstellungen wird die Verbindung mit den neuen Werten neu aufgebaut.
+Lesebestätigungen und Hintergrundempfang gelten sofort, ohne Neuverbindung.
 
 ---
 
@@ -421,9 +487,14 @@ Nach dem Speichern der Netzwerkeinstellungen wird die Verbindung mit den neuen W
 |---|---|
 | `INTERNET`, `ACCESS_NETWORK_STATE` | Relays, Medien-Server, Anrufe |
 | `CAMERA` | Videoanrufe (wird erst beim Anruf angefragt) |
-| `RECORD_AUDIO` | Anrufe (wird erst beim Anruf angefragt) |
+| `RECORD_AUDIO` | Anrufe und Sprachnachrichten (wird erst bei Bedarf angefragt) |
 | `MODIFY_AUDIO_SETTINGS` | Lautsprecher/Hörer umschalten |
-| `POST_NOTIFICATIONS` | Hinweis auf neue Nachrichten |
+| `POST_NOTIFICATIONS` | Hinweis auf neue Nachrichten und eingehende Anrufe |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | optionaler Hintergrundempfang (Typ „specialUse“: dauerhafte Relay-Verbindung ohne Google-Push) |
+| `RECEIVE_BOOT_COMPLETED` | Hintergrundempfang nach Neustart des Handys wieder aufnehmen (nur wenn eingeschaltet) |
+| `WAKE_LOCK` | CPU wenige Sekunden wach halten, um eine eingetroffene Nachricht im Standby zu verarbeiten |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | auf Wunsch: Systemdialog „Akku-Optimierung ausschalten“ öffnen |
+| `USE_FULL_SCREEN_INTENT` | eingehenden Anruf bei ausgeschaltetem Bildschirm anzeigen |
 
 Für die Medienauswahl ist keine Speicherberechtigung nötig (Android-Fotoauswahl).
 
@@ -493,26 +564,33 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
   „Nur über TURN“ automatisch erzwungen; ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
 - **Keine Forward Secrecy für Textnachrichten:** NIP-44 nutzt statische Schlüssel. Wird das Passwort
   kompromittiert, sind auf Relays gespeicherte alte Nachrichten lesbar. (Anrufe haben Forward Secrecy.)
-- **Empfang nur bei laufender App:** Es gibt keine Push-Benachrichtigungen (bewusst ohne Google-Dienste).
-  Eingehende Anrufe kommen nur an, wenn die App geöffnet ist.
+- **Empfang im Hintergrund nur mit eingeschaltetem Hintergrunddienst:** Es gibt keine Push-Benachrichtigungen
+  über Google (bewusst). Ist die Option aus, kommen Nachrichten und Anrufe nur an, solange die App läuft. Ist
+  sie an, kostet das Akku (Schätzung 1–5 % pro Tag). Manche Hersteller beenden den Dienst trotzdem.
+- **„Für alle löschen“ und Lesebestätigungen** funktionieren nur, wenn der Partner Conversa ab 1.3 nutzt
+  (andere Nostr-Apps ignorieren sie). Löschen kann nicht verhindern, dass der Partner eine Nachricht schon
+  gesehen, kopiert oder fotografiert hat. Die verschlüsselten Kopien bleiben auf Relays und Medien-Servern
+  liegen, bis diese sie entfernen; lesbar sind sie ohne Schlüssel nicht.
+- **Lesebestätigungen verraten**, wann du eine Nachricht gelesen hast (abschaltbar).
 - **IP-Adresse bei Anrufen:** Ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
 - **Datenhaltung:** Öffentliche Relays und Medien-Server können alte Daten löschen oder Größenlimits haben.
 - **Nur 1:1-Chats**, keine Gruppen.
 - **Krypto-Implementierung:** secp256k1 basiert auf Bouncy Castle und ist nicht garantiert
   „constant-time“. Kein unabhängiges Sicherheits-Audit.
 - **APK-Größe** ca. 113 MB (WebRTC für alle CPU-Architekturen).
-- Getestet mit Unit-Tests und im Emulator (Android 17): Konten, 2FA, Text- und Bildversand zwischen zwei Konten, Wiederherstellung nach Neuinstallation, Anruf-Bildschirm. Ein echter Anruf zwischen zwei Geräten wurde noch nicht getestet.
+- Getestet mit Unit-Tests, mit zwei Emulatoren (Android 17) und vom Projektinhaber auf echten Geräten.
+  Sprachnachrichten wurden im Emulator nur mit stummer Aufnahme geprüft (kein Mikrofon).
 
 ---
 
 ## 18. Mögliche Erweiterungen
 
-- Hintergrunddienst (Foreground Service) bzw. UnifiedPush für Nachrichten und Anrufe im Hintergrund
+- UnifiedPush als akkusparendere Alternative zum Hintergrunddienst
 - Double-Ratchet-Protokoll (Forward Secrecy für Nachrichten)
 - Native `libsecp256k1` statt Bouncy Castle
 - QR-Code-Scanner zum Hinzufügen von Kontakten
 - Gruppenchats (NIP-17 unterstützt mehrere Empfänger)
-- Sprachnachrichten, Dateien beliebigen Typs
+- Dateien beliebigen Typs
 - Biometrische App-Sperre
 - Sicherheitsnummern-Vergleich zur Kontaktverifizierung
 - ABI-Splits / App Bundle zur Verkleinerung der APK
@@ -550,6 +628,8 @@ RFC 6238, RFC 7539, RFC 5869, RFC 9106 (Argon2), Blossom BUD-01/02.
 
 | Version | Build | Änderungen |
 |---|---|---|
+| 1.3.0 | 8 | Sprachnachrichten; Nachrichten für mich oder für alle löschen; Lesebestätigungen (✓✓, abschaltbar) und Zähler für Ungelesenes; optionaler Hintergrundempfang mit Akku-Hinweis, Neustart nach Handy-Neustart/Update; eingehende Anrufe klingeln auch bei geschlossener App; gebündelter Herzschlag und sofortige Neuverbindung bei Netzwechsel; spät bestätigte Nachrichten wechseln von ⚠ auf ✓; Tastatur verdeckt beim Anruf nicht mehr die Knöpfe |
+| 1.2.3 | 7 | Sprach- und Videoanrufe repariert (doppelt verarbeitetes Anrufsignal); ICE-Kandidaten vor dem Angebot gehen nicht mehr verloren; Verbindungs-Zeitlimit; Netzwerkzeit für Anrufsignale |
 | 1.2.2 | 6 | Sicherheitsupdate: 2FA lässt sich nicht mehr per Login im Flugmodus überspringen; „Konto erstellen“ überschreibt kein bestehendes Konto mehr; Prüfung empfangener Mediendaten (Pfadmanipulation, Größenlimit); Bilder aus Nachrichtenanfragen erst nach Tippen; zu lange Nachrichten werden abgelehnt statt zu hängen; mit Tor wird TURN erzwungen; ehrlichere Beschreibung der 2FA-Grenzen |
 | 1.2.1 | 5 | Absturz beim Start (R8) behoben; Medien-Server auf Server umgestellt, die verschlüsselte Dateien annehmen; 2FA gleicht falsch gehende Geräteuhr per Netzwerkzeit aus; im Emulator mit Android 17 getestet |
 | 1.2.0 | 4 | Ausrichtung als nicht-kommerzielles Open-Source-Hobbyprojekt (Apache 2.0, GitHub Releases): überarbeitete Nutzungsbedingungen (Eigenverantwortung der Nutzer, keine Gewährleistung, Haftung nach §§ 521, 523, 524 BGB), Datenschutzhinweise ohne Verantwortlichen-Angaben, Impressum entfernt, Zustimmung bei jeder Anmeldung, README/LICENSE/NOTICE/SECURITY.md, lokale Release-Signatur |

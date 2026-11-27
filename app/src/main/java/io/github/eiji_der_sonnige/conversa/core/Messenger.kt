@@ -4,7 +4,11 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import android.net.ConnectivityManager
+import android.net.Network
+import android.os.PowerManager
 import io.github.eiji_der_sonnige.conversa.call.CallManager
+import io.github.eiji_der_sonnige.conversa.call.CallState
 import io.github.eiji_der_sonnige.conversa.crypto.Identity
 import io.github.eiji_der_sonnige.conversa.crypto.Nip44
 import io.github.eiji_der_sonnige.conversa.crypto.Npub
@@ -19,6 +23,8 @@ import io.github.eiji_der_sonnige.conversa.data.Contact
 import io.github.eiji_der_sonnige.conversa.data.Media
 import io.github.eiji_der_sonnige.conversa.data.MsgStatus
 import io.github.eiji_der_sonnige.conversa.data.MsgType
+import io.github.eiji_der_sonnige.conversa.data.mediaType
+import io.github.eiji_der_sonnige.conversa.media.VoiceRecorder
 import io.github.eiji_der_sonnige.conversa.data.objects
 import io.github.eiji_der_sonnige.conversa.media.MediaService
 import io.github.eiji_der_sonnige.conversa.nostr.Event
@@ -31,15 +37,19 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import org.json.JSONArray
 import org.json.JSONObject
 import org.webrtc.PeerConnection
+import java.io.File
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -49,13 +59,14 @@ import java.util.concurrent.TimeUnit
 class Messenger(
     private val ctx: Context,
     val identity: Identity,
-    val settings: AppSettings,
+    /** Netzwerkeinstellungen gelten ab Start; Lesebestätigungen u. Ä. werden live übernommen. */
+    @Volatile var settings: AppSettings,
 ) {
     private val handler = CoroutineExceptionHandler { _, e -> Log.e(TAG, "Unerwarteter Fehler", e) }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + handler)
 
+    // Keine OkHttp-Pings: Den Herzschlag übernimmt RelayPool gebündelt und im Hintergrund seltener (Akku).
     private val http: OkHttpClient = OkHttpClient.Builder()
-        .pingInterval(30, TimeUnit.SECONDS)
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)
         .writeTimeout(120, TimeUnit.SECONDS)
@@ -75,44 +86,123 @@ class Messenger(
 
     /** Zuordnung Gift-Wrap-ID -> (Kontakt, Nachrichten-ID) für Zustellbestätigungen der Relays. */
     private val pendingAcks = ConcurrentHashMap<String, Pair<String, String>>()
+    /** Bereits verpackte Nachrichten dieser Sitzung: „Erneut senden“ schickt dieselben Events (keine Duplikate). */
+    private val outbox = ConcurrentHashMap<String, List<Event>>()
+    /** Lesebestätigungen, die vor der zugehörigen Nachricht ankamen (z. B. bei der Erstsynchronisierung). */
+    private val earlyReads = ConcurrentHashMap.newKeySet<String>()
     private var accountPublishJob: Job? = null
+    private val heartbeatKick = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private var netCallback: ConnectivityManager.NetworkCallback? = null
+
+    /** Hält die CPU kurz wach, damit eine eingetroffene Nachricht im Standby noch verarbeitet wird. */
+    private val wakeLock = ctx.getSystemService(PowerManager::class.java)
+        .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "conversa:incoming")
+        .apply { setReferenceCounted(false) }
 
     @Volatile var activeChat: String? = null
+        set(value) {
+            field = value
+            if (value != null) {
+                Notifier.cancelMessage(ctx, value)
+                if (inForeground) markRead(value)
+            }
+        }
+
     @Volatile var inForeground: Boolean = true
+        set(value) {
+            field = value
+            heartbeatKick.tryEmit(Unit) // Takt sofort anpassen bzw. Verbindung nach dem Aufwachen prüfen
+            if (value) {
+                Notifier.cancelCall(ctx)
+                activeChat?.let { Notifier.cancelMessage(ctx, it); markRead(it) }
+            } else {
+                (calls.state.value as? CallState.Incoming)?.let { showIncomingCall(it) }
+            }
+        }
 
     /** Undurchsichtiger d-Tag: verrät niemandem, dass das Konto Conversa nutzt. */
     private val accountTag: String = sha256(identity.privKey, "conversa-account".toByteArray()).toHex().take(32)
 
-    fun start() {
-        media.clearTemp()
-        relays.connect(settings.relays)
+    private fun inboxFilter(): JSONObject {
+        // Gift Wraps tragen absichtlich einen um bis zu 2 Tage zurückdatierten Zeitstempel -> 3 Tage Puffer.
         val since = if (store.lastSync == 0L) 0L else store.lastSync - 3 * 24 * 3600
-        val filter = JSONObject()
+        return JSONObject()
             .put("kinds", JSONArray().put(GiftWrap.KIND_WRAP))
             .put("#p", JSONArray().put(identity.pubHex))
             .apply { if (since > 0) put("since", since) else put("limit", 2000) }
+    }
+
+    fun start() {
+        media.clearTemp()
+        relays.connect(settings.relays)
         scope.launch {
-            relays.events.collect { if (it.subId == "inbox") handleWrap(it.event) }
+            relays.events.collect {
+                if (it.subId == "inbox") {
+                    wakeLock.acquire(5_000)
+                    handleWrap(it.event)
+                }
+            }
         }
         scope.launch {
             relays.oks.collect { (id, ok) ->
                 if (ok) pendingAcks.remove(id)?.let { (peer, msgId) -> store.updateStatus(peer, msgId, MsgStatus.SENT) }
             }
         }
-        relays.subscribe("inbox", listOf(filter))
+        relays.subscribe("inbox", listOf(inboxFilter()))
         scope.launch {
             while (isActive) {
                 delay(60_000)
                 store.setLastSync(Event.now())
+                // Nach einer Neuverbindung nicht wieder den gesamten Verlauf anfordern.
+                relays.updateFilters("inbox", listOf(inboxFilter()))
             }
         }
+        scope.launch {
+            while (isActive) {
+                withTimeoutOrNull(if (inForeground) HEARTBEAT_FG_MS else HEARTBEAT_BG_MS) { heartbeatKick.first() }
+                relays.heartbeat()
+            }
+        }
+        scope.launch {
+            calls.state.collect { st ->
+                if (st is CallState.Incoming) { if (!inForeground) showIncomingCall(st) }
+                else Notifier.cancelCall(ctx)
+            }
+        }
+        registerNetworkCallback()
     }
 
     fun stop() {
         store.flush()
         calls.release()
         relays.close()
+        netCallback?.let {
+            try { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } catch (_: Exception) {}
+        }
+        Notifier.cancelCall(ctx)
+        if (wakeLock.isHeld) wakeLock.release()
         scope.cancel()
+    }
+
+    /** Vom Hintergrunddienst (Wecker) aufgerufen: Verbindungen prüfen. */
+    fun heartbeatNow() {
+        relays.heartbeat()
+    }
+
+    private fun registerNetworkCallback() {
+        val cb = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) = relays.reconnectNow()
+        }
+        try {
+            ctx.getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(cb)
+            netCallback = cb
+        } catch (e: Exception) {
+            Log.w(TAG, "Netzwerküberwachung nicht verfügbar: ${e.message}")
+        }
+    }
+
+    private fun showIncomingCall(st: CallState.Incoming) {
+        Notifier.incomingCall(ctx, st.video)
     }
 
     private fun iceConfig(): CallManager.IceConfig {
@@ -140,7 +230,9 @@ class Messenger(
         val fromMe = u.sender == identity.pubHex
         val peer = if (fromMe) r.tagValues("p").firstOrNull { it != identity.pubHex } ?: return else u.sender
         if (!fromMe && peer !in store.contacts.value) {
-            // Unbekannter Absender = Nachrichtenanfrage (Spam-Schutz: erst nach Annahme normal sichtbar).
+            // Nur echte Nachrichten eines Unbekannten erzeugen eine Nachrichtenanfrage (Spam-Schutz: erst nach
+            // Annahme normal sichtbar). Signale, Bestätigungen und Löschungen von Fremden werden verworfen.
+            if (r.kind != GiftWrap.KIND_CHAT && r.kind != GiftWrap.KIND_FILE) return
             store.upsertContact(Contact(peer, "Unbekannt ${Npub.short(peer)}", accepted = false))
         }
         when (r.kind) {
@@ -162,24 +254,61 @@ class Messenger(
                 val nonce = r.tag("decryption-nonce") ?: return
                 val sha = r.tag("x") ?: return
                 val m = Media(r.content, mime, key.lowercase(), nonce.lowercase(), sha.lowercase(),
-                    r.tag("size")?.toLongOrNull() ?: 0L)
+                    r.tag("size")?.toLongOrNull() ?: 0L,
+                    r.tag("duration")?.toLongOrNull()?.coerceIn(0, Media.MAX_DURATION_MS) ?: 0L)
                 if (!m.isWellFormed()) return
-                val type = when {
-                    mime.startsWith("image/") -> MsgType.IMAGE
-                    mime.startsWith("video/") -> MsgType.VIDEO
-                    else -> MsgType.FILE
-                }
-                addIncoming(ChatMessage(r.id, peer, fromMe, type, "", m, r.createdAt,
+                addIncoming(ChatMessage(r.id, peer, fromMe, mediaType(mime), "", m, r.createdAt,
                     if (fromMe) MsgStatus.SENT else MsgStatus.RECEIVED))
+            }
+            GiftWrap.KIND_DELETE -> {
+                val ids = r.tagValues("e").filter { HEX64.matches(it) }.take(MAX_IDS_PER_EVENT)
+                if (ids.isEmpty()) return
+                // Eigene Löschung (von diesem oder einem anderen Gerät): gilt für alles im Chat.
+                // Löschung des Partners: nur für Nachrichten, die er selbst geschrieben hat.
+                store.deleteMessages(peer, ids, onlyFromPeer = !fromMe).forEach { removed ->
+                    removed.media?.let { media.deleteCached(it) }
+                }
+            }
+            GiftWrap.KIND_RECEIPT -> {
+                if (fromMe) return
+                r.tagValues("e").filter { HEX64.matches(it) }.take(MAX_IDS_PER_EVENT).forEach { id ->
+                    val known = store.messages.value[peer]?.any { it.id == id && it.fromMe } == true
+                    if (known) store.updateStatus(peer, id, MsgStatus.READ)
+                    else if (earlyReads.size < 5000) earlyReads.add(id)
+                }
             }
         }
     }
 
     private fun addIncoming(m: ChatMessage) {
-        val isNew = store.upsertMessage(m)
-        val recent = Event.now() - m.createdAt < 600
-        if (isNew && !m.fromMe && recent && (!inForeground || activeChat != m.peer)) {
-            Notifier.newMessage(ctx, m.peer)
+        val msg = if (m.fromMe && earlyReads.remove(m.id)) m.copy(status = MsgStatus.READ) else m
+        val isNew = store.upsertMessage(msg)
+        if (!isNew || msg.fromMe) return
+        if (inForeground && activeChat == msg.peer) {
+            markRead(msg.peer)
+        } else if (Event.now() - msg.createdAt < 600) {
+            Notifier.newMessage(ctx, msg.peer)
+        }
+    }
+
+    /**
+     * Markiert den Chat als gelesen und sendet – falls eingeschaltet – eine Lesebestätigung. Nie an
+     * Nachrichtenanfragen: Ein Unbekannter soll nicht erfahren, ob und wann du seine Nachricht gesehen hast.
+     */
+    fun markRead(peer: String) {
+        val unread = store.markRead(peer)
+        if (unread.isEmpty() || !settings.readReceipts) return
+        if (store.contacts.value[peer]?.accepted != true) return
+        val cutoff = Event.now() - 30L * 24 * 3600
+        val ids = unread.filter { it.createdAt > cutoff && HEX64.matches(it.id) }.map { it.id }
+        if (ids.isEmpty()) return
+        scope.launch(Dispatchers.Default) {
+            ids.chunked(MAX_IDS_PER_EVENT).forEach { chunk ->
+                val tags = listOf(listOf("p", peer)) + chunk.map { listOf("e", it) }
+                val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_RECEIPT, tags, "read")
+                // Bestätigungen löschen die Relays nach 30 Tagen (NIP-40). Sie gehen nur an den Partner.
+                relays.publish(GiftWrap.wrap(rumor, identity.privKey, peer, expiration = Event.now() + 30L * 24 * 3600))
+            }
         }
     }
 
@@ -188,13 +317,20 @@ class Messenger(
     private fun publishRumor(rumor: Event, peer: String, msgId: String?) {
         val toPeer = GiftWrap.wrap(rumor, identity.privKey, peer)
         val toSelf = GiftWrap.wrap(rumor, identity.privKey, identity.pubHex) // Multi-Device-Verlauf
+        if (msgId != null) outbox[msgId] = listOf(toPeer, toSelf)
+        publishWraps(peer, msgId, toPeer, toSelf)
+    }
+
+    private fun publishWraps(peer: String, msgId: String?, toPeer: Event, toSelf: Event) {
         if (msgId != null) pendingAcks[toPeer.id] = peer to msgId
         relays.publish(toPeer)
         relays.publish(toSelf)
         if (msgId != null) {
             scope.launch {
                 delay(20_000)
-                if (pendingAcks.remove(toPeer.id) != null) store.updateStatus(peer, msgId, MsgStatus.FAILED)
+                // Zuordnung bleibt erhalten: Der Pool sendet gepufferte Events nach einer Neuverbindung
+                // erneut, eine spätere Bestätigung macht aus „fehlgeschlagen“ dann noch „gesendet“.
+                if (pendingAcks.containsKey(toPeer.id)) store.updateStatus(peer, msgId, MsgStatus.FAILED)
             }
         }
     }
@@ -212,6 +348,13 @@ class Messenger(
     }
 
     suspend fun resend(m: ChatMessage) {
+        val wraps = outbox[m.id]
+        if (wraps != null) {
+            // Dieselben Events erneut senden – kommt das Original doch noch an, entsteht kein Duplikat.
+            store.updateStatus(m.peer, m.id, MsgStatus.SENDING) // FAILED -> SENDING
+            withContext(Dispatchers.Default) { publishWraps(m.peer, m.id, wraps[0], wraps[1]) }
+            return
+        }
         store.removeMessage(m.peer, m.id)
         when (m.type) {
             MsgType.TEXT -> sendText(m.peer, m.text)
@@ -226,15 +369,30 @@ class Messenger(
             if (c.moveToFirst()) c.getLong(0) else -1L
         } ?: -1L
         if (size > MAX_MEDIA) throw IOException("Datei zu groß (max. ${MAX_MEDIA / 1024 / 1024} MB)")
-        val placeholderId = "local-" + randomBytes(8).toHex()
-        val type = if (mime.startsWith("video/")) MsgType.VIDEO else if (mime.startsWith("image/")) MsgType.IMAGE else MsgType.FILE
-        store.upsertMessage(ChatMessage(placeholderId, peer, true, type, "Wird verschlüsselt & hochgeladen…", null, Event.now(), MsgStatus.SENDING))
+        uploadAndSend(peer, mime, 0L) {
+            cr.openInputStream(uri)?.use { it.readBytes() } ?: throw IOException("Datei nicht lesbar")
+        }
+    }
+
+    /** Sprachnachricht: Die Aufnahme wird verschlüsselt hochgeladen und danach lokal gelöscht. */
+    suspend fun sendVoice(peer: String, file: File, durationMs: Long) = withContext(Dispatchers.IO) {
         try {
-            val bytes = cr.openInputStream(uri)?.use { it.readBytes() } ?: throw IOException("Datei nicht lesbar")
+            uploadAndSend(peer, VoiceRecorder.MIME, durationMs) { file.readBytes() }
+        } finally {
+            file.delete()
+        }
+    }
+
+    private suspend fun uploadAndSend(peer: String, mime: String, durationMs: Long, read: () -> ByteArray) {
+        val placeholderId = "local-" + randomBytes(8).toHex()
+        store.upsertMessage(ChatMessage(placeholderId, peer, true, mediaType(mime), "Wird verschlüsselt & hochgeladen…",
+            null, Event.now(), MsgStatus.SENDING))
+        try {
+            val bytes = read()
             if (bytes.size > MAX_MEDIA) throw IOException("Datei zu groß")
             val enc = media.encrypt(bytes)
             val url = media.upload(enc.data)
-            val m = Media(url, mime, enc.key.toHex(), enc.nonce.toHex(), sha256(enc.data).toHex(), bytes.size.toLong())
+            val m = Media(url, mime, enc.key.toHex(), enc.nonce.toHex(), sha256(enc.data).toHex(), bytes.size.toLong(), durationMs)
             store.removeMessage(peer, placeholderId)
             sendMediaRumor(peer, m)
         } catch (e: Exception) {
@@ -244,7 +402,7 @@ class Messenger(
     }
 
     private fun sendMediaRumor(peer: String, m: Media) {
-        val tags = listOf(
+        val tags = mutableListOf(
             listOf("p", peer),
             listOf("file-type", m.mime),
             listOf("encryption-algorithm", "aes-gcm"),
@@ -253,14 +411,37 @@ class Messenger(
             listOf("x", m.sha256),
             listOf("size", m.size.toString()),
         )
+        if (m.durationMs > 0) tags.add(listOf("duration", m.durationMs.toString()))
         val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_FILE, tags, m.url)
-        val type = when {
-            m.mime.startsWith("image/") -> MsgType.IMAGE
-            m.mime.startsWith("video/") -> MsgType.VIDEO
-            else -> MsgType.FILE
-        }
-        store.upsertMessage(ChatMessage(rumor.id, peer, true, type, "", m, rumor.createdAt, MsgStatus.SENDING))
+        store.upsertMessage(ChatMessage(rumor.id, peer, true, mediaType(m.mime), "", m, rumor.createdAt, MsgStatus.SENDING))
         publishRumor(rumor, peer, rumor.id)
+    }
+
+    /**
+     * Löscht Nachrichten. „Für mich“: nur auf deinen Geräten – die Löschung geht verschlüsselt nur an dich
+     * selbst, damit sie auch auf anderen Geräten und nach einer Neuanmeldung gilt. „Für alle“: zusätzlich an
+     * den Chatpartner, dessen App sie ebenfalls entfernt. Für alle löschbar sind nur eigene, gesendete Nachrichten.
+     */
+    suspend fun deleteMessages(peer: String, msgs: List<ChatMessage>, forEveryone: Boolean) = withContext(Dispatchers.Default) {
+        if (msgs.isEmpty()) return@withContext
+        val (local, real) = msgs.partition { !HEX64.matches(it.id) }
+        local.forEach { store.removeMessage(peer, it.id) }
+        if (real.isEmpty()) return@withContext
+        store.deleteMessages(peer, real.map { it.id }, onlyFromPeer = false)
+        real.forEach { msg ->
+            msg.media?.let { media.deleteCached(it) }
+            outbox.remove(msg.id)
+        }
+        fun publishDelete(ids: List<String>, to: String) = ids.chunked(MAX_IDS_PER_EVENT).forEach { chunk ->
+            val tags = listOf(listOf("p", peer)) + chunk.map { listOf("e", it) }
+            val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_DELETE, tags, "")
+            relays.publish(GiftWrap.wrap(rumor, identity.privKey, to))
+        }
+        publishDelete(real.map { it.id }, identity.pubHex)
+        if (forEveryone) {
+            val mine = real.filter { it.fromMe && it.status.rank >= MsgStatus.SENT.rank }.map { it.id }
+            if (mine.isNotEmpty()) publishDelete(mine, peer)
+        }
     }
 
     private suspend fun sendSignal(peer: String, payload: JSONObject) = withContext(Dispatchers.Default) {
@@ -356,5 +537,10 @@ class Messenger(
         private const val TAG = "Messenger"
         const val MAX_MEDIA = 50L * 1024 * 1024
         private const val MAX_RUMOR_BYTES = 40_000
+        private const val MAX_IDS_PER_EVENT = 100
+        private val HEX64 = Regex("^[0-9a-f]{64}$")
+        /** Herzschlag: im Vordergrund schnell (Anrufe), im Hintergrund selten (Akku, Funkmodul darf schlafen). */
+        private const val HEARTBEAT_FG_MS = 30_000L
+        private const val HEARTBEAT_BG_MS = 240_000L
     }
 }

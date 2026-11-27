@@ -70,6 +70,7 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
     var tor by remember(current) { mutableStateOf(current.useTor) }
     var confirmLogout by remember { mutableStateOf(false) }
     var disable2fa by remember { mutableStateOf(false) }
+    var explainBackground by remember { mutableStateOf(false) }
 
     BackHandler { vm.navigate(Screen.Chats) }
 
@@ -102,6 +103,28 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
                 )
                 if (totp == null) Button({ vm.startTotpSetup() }) { Text("2FA aktivieren") }
                 else OutlinedButton({ disable2fa = true }) { Text("2FA deaktivieren") }
+            }
+
+            Section("Privatsphäre & Empfang") {
+                SwitchRow("Lesebestätigungen senden (✓✓)", current.readReceipts) {
+                    vm.saveLocalSettings(readReceipts = it, background = current.background)
+                }
+                Text(
+                    "Wie bei anderen Messengern gegenseitig: Ist es aus, siehst du auch nicht, ob andere deine " +
+                        "Nachrichten gelesen haben. An Nachrichtenanfragen werden nie Bestätigungen gesendet.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                HorizontalDivider()
+                SwitchRow("Im Hintergrund verbunden bleiben", current.background) {
+                    if (it) explainBackground = true
+                    else vm.saveLocalSettings(readReceipts = current.readReceipts, background = false)
+                }
+                Text(
+                    if (current.background) "Aktiv: Nachrichten und Anrufe kommen auch bei geschlossener App an. Kostet etwas Akku."
+                    else "Aus: Nachrichten kommen an, solange die App geöffnet ist oder kurz im Hintergrund läuft.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (current.background) BatteryOptimizationRow()
             }
 
             Section("Netzwerk (dezentral)") {
@@ -156,6 +179,37 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
             text = { Text("Alle lokalen Daten werden sicher gelöscht. Chats und Kontakte lassen sich mit Benutzername + Passwort aus dem Netzwerk wiederherstellen, solange die Relays sie speichern.") },
             confirmButton = { TextButton({ confirmLogout = false; vm.logout() }) { Text("Abmelden") } },
             dismissButton = { TextButton({ confirmLogout = false }) { Text("Abbrechen") } }
+        )
+    }
+    if (explainBackground) {
+        AlertDialog(
+            onDismissRequest = { explainBackground = false },
+            title = { Text("Im Hintergrund empfangen?") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Conversa bleibt dann dauerhaft mit den Relays verbunden. Nachrichten und Anrufe kommen sofort an – " +
+                            "auch wenn die App geschlossen ist oder das Handy im Standby liegt. Es wird kein Google-Dienst benutzt."
+                    )
+                    Text(
+                        "🔋 Akku: Das kostet zusätzlich Strom, grob geschätzt etwa 1–5 % pro Tag. Wie viel genau, hängt vom " +
+                            "Handy, vom Netz (WLAN ist sparsamer als Mobilfunk) und von der Anzahl der Nachrichten ab. Grund: " +
+                            "Das Handy prüft alle paar Minuten kurz, ob die Verbindung noch steht."
+                    )
+                    Text(
+                        "Android zeigt dafür einen dauerhaften Hinweis in der Benachrichtigungsleiste. Du kannst ihn in den " +
+                            "Systemeinstellungen ausblenden. Mit Tor muss auch Orbot im Hintergrund laufen.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton({
+                    explainBackground = false
+                    vm.saveLocalSettings(readReceipts = current.readReceipts, background = true)
+                }) { Text("Einschalten") }
+            },
+            dismissButton = { TextButton({ explainBackground = false }) { Text("Abbrechen") } }
         )
     }
     if (disable2fa) {
@@ -253,6 +307,39 @@ private fun InfoSection(m: Messenger) {
         )
     }
     asset?.let { (title, path) -> AssetTextDialog(title, path) { asset = null } }
+}
+
+/**
+ * Manche Hersteller beenden Hintergrund-Apps trotz Dienst. Die Ausnahme von der Akku-Optimierung macht den
+ * Empfang zuverlässiger, erlaubt Conversa aber sonst nichts zusätzlich.
+ */
+@Composable
+private fun BatteryOptimizationRow() {
+    val ctx = LocalContext.current
+    val pm = ctx.getSystemService(android.os.PowerManager::class.java)
+    var exempt by remember { mutableStateOf(pm.isIgnoringBatteryOptimizations(ctx.packageName)) }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { exempt = pm.isIgnoringBatteryOptimizations(ctx.packageName) }
+    if (exempt) {
+        Text("✓ Von der Akku-Optimierung ausgenommen.", style = MaterialTheme.typography.bodySmall)
+    } else {
+        Text(
+            "Tipp: Manche Handys (z. B. Xiaomi, Huawei, Samsung) beenden Apps im Hintergrund trotzdem. " +
+                "Dann hilft es, Conversa von der Akku-Optimierung auszunehmen.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        OutlinedButton({
+            try {
+                launcher.launch(
+                    android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        .setData(android.net.Uri.parse("package:${ctx.packageName}"))
+                )
+            } catch (e: Exception) {
+                launcher.launch(android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            }
+        }) { Text("Akku-Optimierung ausschalten") }
+    }
 }
 
 @Composable

@@ -33,6 +33,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +65,14 @@ fun CallScreen(m: Messenger, state: CallState) {
     val mic by calls.micOn.collectAsState()
     val cam by calls.camOn.collectAsState()
     val speaker by calls.speakerOn.collectAsState()
+
+    // Eine offene Tastatur (z. B. aus dem Chat) würde sonst die Anrufknöpfe verdecken.
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focus = LocalFocusManager.current
+    LaunchedEffect(Unit) {
+        focus.clearFocus(force = true)
+        keyboard?.hide()
+    }
 
     val (peer, video) = when (state) {
         is CallState.Outgoing -> state.peer to state.video

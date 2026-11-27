@@ -131,12 +131,23 @@ class MediaService(
         decrypt(enc, media.keyHex.hexToBytes(), media.nonceHex.hexToBytes())
     }
 
-    /** Für die Videowiedergabe: entschlüsselte Datei im privaten App-Cache (wird beim Start geleert). */
+    /** Für Video/Audio: entschlüsselte Datei im privaten App-Cache (wird beim Start geleert). */
     suspend fun loadToTempFile(media: Media): File {
         val bytes = load(media)
-        return withContext(Dispatchers.IO) {
-            File(tmpDir, media.sha256.take(16) + ".mp4").apply { writeBytes(bytes) }
+        val ext = when {
+            media.mime.startsWith("audio/") -> ".m4a"
+            else -> ".mp4"
         }
+        return withContext(Dispatchers.IO) {
+            File(tmpDir, media.sha256.take(16) + ext).apply { writeBytes(bytes) }
+        }
+    }
+
+    /** Nach dem Löschen einer Nachricht: verschlüsselte und entschlüsselte Kopie auf dem Gerät entfernen. */
+    fun deleteCached(media: Media) {
+        if (!media.isWellFormed()) return
+        File(cacheDir, media.sha256).delete()
+        tmpDir.listFiles()?.filter { it.name.startsWith(media.sha256.take(16)) }?.forEach { it.delete() }
     }
 
     fun clearTemp() {

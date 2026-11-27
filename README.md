@@ -34,7 +34,10 @@ Nicht-kommerzielles Open-Source-Hobbyprojekt · Apache License 2.0
 ## Funktionen
 - Anmeldung nur mit Benutzername + Passwort – keine E-Mail, keine Telefonnummer
 - Zwei-Faktor-Authentifizierung (TOTP, z. B. Google Authenticator)
-- Ende-zu-Ende-verschlüsselte Text-, Bild- und Videonachrichten (Nostr NIP-17/44/59)
+- Ende-zu-Ende-verschlüsselte Text-, Bild-, Video- und Sprachnachrichten (Nostr NIP-17/44/59)
+- Nachrichten für sich selbst oder für alle löschen
+- Zustellstatus: ✓ übermittelt, ✓✓ gelesen (Lesebestätigungen abschaltbar)
+- Optionaler Empfang im Hintergrund ohne Google-Dienste (kostet etwas Akku, siehe Einstellungen)
 - Sprach- und Videoanrufe direkt Peer-to-Peer (WebRTC, DTLS-SRTP)
 - Dezentral über austauschbare Nostr-Relays und Blossom-Medien-Server
 - Optional: Tor (über Orbot), eigener TURN-Server
@@ -53,10 +56,13 @@ betrieben, nicht von diesem Projekt. Die Entwickler haben keinen Einfluss auf de
 Inhalte oder Datenverarbeitung. Technisch bedingt sehen diese Server z. B. die IP-Adresse.
 
 ## Einschränkungen
-- Kein unabhängiges Sicherheits-Audit; bisher vor allem durch Unit-Tests geprüft.
+- Kein unabhängiges Sicherheits-Audit; geprüft durch Unit-Tests und Tests mit Emulatoren und Geräten.
 - Keine Forward Secrecy bei Textnachrichten.
 - Bei Anrufen ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
-- Nachrichten kommen nur an, solange die App läuft (keine Push-Dienste).
+- Ohne den optionalen Hintergrundempfang kommen Nachrichten nur an, solange die App läuft (keine
+  Push-Dienste). Mit ihm kostet die dauerhafte Verbindung etwas Akku (grob 1–5 % pro Tag).
+- „Für alle löschen“ entfernt die Nachricht beim Partner nur, wenn er Conversa ab 1.3 nutzt, und kann
+  nicht verhindern, dass er sie vorher gesehen oder gespeichert hat.
 - Ein verlorenes Passwort kann nicht wiederhergestellt werden.
 - Die 2FA ist nur eine Sperre innerhalb der App: Wer Benutzername und Passwort kennt, kommt auch ohne
   2FA an das Konto. Deshalb ein langes, einzigartiges Passwort verwenden.
