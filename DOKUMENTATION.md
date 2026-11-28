@@ -72,7 +72,8 @@ keinen eigenen Server; für die Registrierung sind keine E-Mail-Adresse und kein
 1. App öffnen, Schalter **„Neues Konto erstellen“** aktivieren.
 2. Benutzername (mind. 3 Zeichen) und Passwort eingeben und wiederholen.
    Passwortregeln: mindestens 12 Zeichen und mindestens 3 von 4 Zeichenklassen
-   (Klein-, Großbuchstaben, Ziffern, Sonderzeichen).
+   (Klein-, Großbuchstaben, Ziffern, Sonderzeichen; ab 20 Zeichen genügen 2). Leicht zu erratende Muster
+   (Wort + Jahreszahl, Folgen, Benutzername) werden abgelehnt (siehe Abschnitt 5).
 3. Nutzungsbedingungen und Datenschutzhinweise lesen und das Kästchen zur Bestätigung anhaken (wird auch bei jeder Anmeldung verlangt).
 4. **„Konto erstellen“** tippen. Die Schlüsselberechnung dauert einige Sekunden.
 
@@ -232,11 +233,28 @@ Es gibt keine Registrierung auf einem Server. Die Identität ist ein **secp256k1
 deterministisch aus den Zugangsdaten berechnet wird:
 
 ```
+V1 (Konten bis 1.3):
 salt     = SHA-256("conversa-identity-v1:" + benutzername.trim().lowercase())
 privKey  = Argon2id(passwort, salt, m = 64 MB, t = 3, p = 2, Länge = 32 Byte)
+V2 (neue Konten ab 1.4):
+salt     = SHA-256("conversa-identity-v2:" + benutzername.trim().lowercase())
+privKey  = Argon2id(passwort, salt, m = 128 MB, t = 4, p = 2, Länge = 32 Byte)
+
 pubKey   = x-Koordinate von privKey · G       (32 Byte, x-only, BIP-340)
 Kontakt-ID = Bech32("npub", pubKey)
 ```
+
+**Warum zwei Versionen?** Der öffentliche Schlüssel ist öffentlich. Wer den Benutzernamen kennt oder errät, kann
+Passwörter offline durchprobieren. V2 macht jeden Versuch etwa 2,7-mal so teuer. Bestehende Konten bleiben bei V1,
+sonst würde sich ihre Identität (Kontakt-ID, Verlauf) ändern. Da es keinen Server gibt, der die Version kennt,
+prüft die Anmeldung zuerst V1 (Konto-Event vorhanden?) und dann V2. Gibt es keins von beiden, legt „Konto
+erstellen“ ein V2-Konto an. Eine reine Anmeldung ohne gefundenes Konto nutzt wie bisher V1. Bei V2-Konten dauert
+die Anmeldung dadurch etwas länger (zwei Ableitungen).
+
+**Passwortregeln für neue Konten:** mindestens 12 Zeichen und 3 von 4 Zeichenklassen (ab 20 Zeichen genügen 2,
+damit Passphrasen aus mehreren Wörtern möglich sind). Abgelehnt werden außerdem: der Benutzername im Passwort,
+Tastatur- und Zahlenfolgen (1234, qwertz), Wiederholungen (aaaa) und ein gängiges Wort mit angehängten Ziffern oder
+Zeichen (z. B. „Sommer2026!!“, auch in Leetspeak wie „P@ssw0rt“). Bestehende Passwörter sind davon nicht betroffen.
 
 - Gleiche Zugangsdaten ergeben auf jedem Gerät dasselbe Konto.
 - Ein Konto mit denselben Daten „neu zu erstellen“ ist gleichbedeutend mit Anmelden.
@@ -277,7 +295,7 @@ Kontakt-ID = Bech32("npub", pubKey)
 
 | Zweck | Verfahren | Datei |
 |---|---|---|
-| Schlüsselableitung | Argon2id (64 MB, 3 Iterationen) | `crypto/Identity.kt` |
+| Schlüsselableitung | Argon2id (neue Konten: 128 MB, 4 Iterationen; bis 1.3: 64 MB, 3 Iterationen) | `crypto/Identity.kt` |
 | Signaturen | Schnorr / BIP-340 auf secp256k1 | `crypto/Secp256k1.kt` |
 | Schlüsselaustausch | ECDH secp256k1 (x-Koordinate) | `crypto/Secp256k1.kt` |
 | Nachrichten | NIP-44 v2: HKDF-SHA256, ChaCha20, HMAC-SHA256, Padding | `crypto/Nip44.kt` |
@@ -624,8 +642,9 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
 - **2FA** wird nur in der App durchgesetzt und schützt nicht vor jemandem, der Benutzername und
   Passwort kennt (siehe Abschnitt 6).
 - **Offline-Rateangriffe:** Der öffentliche Schlüssel ist auf den Relays sichtbar. Wer den Benutzernamen
-  errät, kann Passwörter offline durchprobieren; Argon2id (64 MB) bremst das nur. Kurze oder
-  wiederverwendete Passwörter sind deshalb ein reales Risiko.
+  errät, kann Passwörter offline durchprobieren; Argon2id (neue Konten: 128 MB, 4 Durchläufe; ältere: 64 MB)
+  bremst das nur, und die Passwortprüfung lehnt typische Muster ab. Wiederverwendete Passwörter sind
+  trotzdem ein reales Risiko.
 - **Bilder von bekannten Kontakten** werden automatisch von der Adresse geladen, die der Absender
   angibt; dieser Server sieht dabei die IP-Adresse (ohne Tor). Bei Nachrichtenanfragen erst nach Tippen.
 - **Tor und Anrufe:** Anrufe laufen nicht über Tor. Mit Tor und eingetragenem TURN-Server wird
@@ -659,7 +678,7 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
 - Double-Ratchet-Protokoll (Forward Secrecy für Nachrichten)
 - Native `libsecp256k1` statt Bouncy Castle
 - Vollständige, signierte Änderungskette beim Gruppenbeitritt bzw. MLS für Gruppen
-- Stärkere Schlüsselableitung bzw. KDF-Migration (siehe Offline-Rateangriffe)
+- Migration bestehender Konten auf die stärkere Schlüsselableitung bzw. auf ein zufälliges Geheimnis (KDF-Migration)
 - Biometrische App-Sperre
 - Sicherheitsnummern-Vergleich zur Kontaktverifizierung
 - Eigener Relay- und Blossom-Server für volle Kontrolle
@@ -697,7 +716,7 @@ RFC 6238, RFC 7539, RFC 5869, RFC 9106 (Argon2), Blossom BUD-01/02.
 
 | Version | Build | Änderungen |
 |---|---|---|
-| 1.4.0 | 9 | Gruppenchats mit signierten Admin-Rechten (NIP-17-Fan-out, bis 32 Mitglieder, 5 Admins); Dateien beliebigen Typs; QR-Scanner für Kontakt-IDs; Chat-Menü in der Chatliste (umbenennen nur lokal, löschen); Spam-Limits und Blockieren; englische Oberfläche und README; APK pro Prozessortyp (~22 statt 96 MB); schnellere Wiederverbindung zu Relays; Abhängigkeiten aktualisiert; Warnung bei Anrufen mit Tor ohne TURN |
+| 1.4.0 | 9 | Gruppenchats mit signierten Admin-Rechten (NIP-17-Fan-out, bis 32 Mitglieder, 5 Admins); stärkere Schlüsselableitung (Argon2id 128 MB) und strengere Passwortprüfung für neue Konten; Dateien beliebigen Typs; QR-Scanner für Kontakt-IDs; Chat-Menü in der Chatliste (umbenennen nur lokal, löschen); Spam-Limits und Blockieren; englische Oberfläche und README; APK pro Prozessortyp (~22 statt 96 MB); schnellere Wiederverbindung zu Relays; Abhängigkeiten aktualisiert; Warnung bei Anrufen mit Tor ohne TURN |
 | 1.3.0 | 8 | Sprachnachrichten; Nachrichten für mich oder für alle löschen; Lesebestätigungen (✓✓, abschaltbar) und Zähler für Ungelesenes; optionaler Hintergrundempfang mit Akku-Hinweis, Neustart nach Handy-Neustart/Update; eingehende Anrufe klingeln auch bei geschlossener App; gebündelter Herzschlag und sofortige Neuverbindung bei Netzwechsel; spät bestätigte Nachrichten wechseln von ⚠ auf ✓; Tastatur verdeckt beim Anruf nicht mehr die Knöpfe |
 | 1.2.3 | 7 | Sprach- und Videoanrufe repariert (doppelt verarbeitetes Anrufsignal); ICE-Kandidaten vor dem Angebot gehen nicht mehr verloren; Verbindungs-Zeitlimit; Netzwerkzeit für Anrufsignale |
 | 1.2.2 | 6 | Sicherheitsupdate: 2FA lässt sich nicht mehr per Login im Flugmodus überspringen; „Konto erstellen“ überschreibt kein bestehendes Konto mehr; Prüfung empfangener Mediendaten (Pfadmanipulation, Größenlimit); Bilder aus Nachrichtenanfragen erst nach Tippen; zu lange Nachrichten werden abgelehnt statt zu hängen; mit Tor wird TURN erzwungen; ehrlichere Beschreibung der 2FA-Grenzen |

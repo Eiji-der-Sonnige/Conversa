@@ -22,6 +22,9 @@ Gruppenchats funktionieren nur, wenn **alle** Mitglieder 1.4.0 nutzen.
 - **Blockieren** und **Spam-Schutz:** höchstens 30 offene Nachrichtenanfragen mit je 20 Nachrichten,
   höchstens 10 offene Gruppeneinladungen; blockierte Absender verwaltbar unter Einstellungen.
 - **Englische Oberfläche** (folgt der Systemsprache), englische README und Rechtstexte (deutsche Fassung maßgeblich).
+- **Besserer Schutz neuer Konten gegen Passwort-Raten:** stärkere Schlüsselableitung (Argon2id 128 MB, 4 Durchläufe,
+  etwa 2,7-mal so teuer) und strengere Passwortprüfung (keine Wort+Jahreszahl-Muster, Folgen, Wiederholungen oder den
+  Benutzernamen; Passphrasen ab 20 Zeichen erlaubt). **Bestehende Konten bleiben unverändert** und funktionieren wie bisher.
 
 ### Verbessert
 - **APK pro Prozessortyp:** ca. 22 MB (arm64) statt 96 MB; zusätzlich eine Universal-APK.
@@ -37,6 +40,8 @@ Gruppenchats funktionieren nur, wenn **alle** Mitglieder 1.4.0 nutzen.
   her, verlassene Gruppen bleiben weg
 - Chat lokal umbenennen und löschen; englische Oberfläche
 - Neuanmeldung mit Bouncy Castle 1.87 ergibt dieselbe Identität; Videoanruf mit WebRTC 1.3.10
+- Bestehendes Konto meldet sich unverändert an; neues Konto (V2) anlegen, „Sommer2026!!“ wird abgelehnt,
+  Neuanmeldung findet dieselbe Kontakt-ID
 - QR-Scanner öffnet die Kamera (Auslesen per Unit-Test geprüft)
 
 ## [1.3.0] – 2026-11-27 (Build 8)

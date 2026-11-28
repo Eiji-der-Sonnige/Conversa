@@ -260,7 +260,7 @@ private fun InfoSection(m: Messenger) {
         InfoRow(stringResource(R.string.messages), "NIP-44 v2 (ChaCha20, HMAC-SHA256)")
         InfoRow(stringResource(R.string.metadata_protection), "Gift Wrap (NIP-17 / NIP-59)")
         InfoRow(stringResource(R.string.signatures), "secp256k1 Schnorr (BIP-340)")
-        InfoRow(stringResource(R.string.key_derivation), "Argon2id, 64 MB")
+        InfoRow(stringResource(R.string.key_derivation), "Argon2id, 64–128 MB")
         InfoRow(stringResource(R.string.media), "AES-256-GCM")
         InfoRow(stringResource(R.string.calls), "WebRTC P2P, DTLS-SRTP")
         InfoRow(stringResource(R.string.local_data), "Android Keystore, AES-256-GCM")

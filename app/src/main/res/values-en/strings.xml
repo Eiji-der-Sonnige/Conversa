@@ -219,8 +219,11 @@
     <string name="privacy_short">Privacy</string>
     <string name="project">Project</string>
     <string name="project_value">Non-commercial hobby project</string>
-    <string name="pw_classes">At least 3 of: lowercase letters, uppercase letters, digits, special characters</string>
+    <string name="pw_classes">At least 3 of: lowercase letters, uppercase letters, digits, special characters (2 are enough from 20 characters)</string>
+    <string name="pw_common">Too easy to guess: a common word with numbers/symbols (e.g. “Summer2026!”). Tip: several random words</string>
+    <string name="pw_contains_username">The password must not contain the username</string>
     <string name="pw_min_length">At least 12 characters</string>
+    <string name="pw_pattern">Too easy to guess: no sequences (1234, qwerty) or repetitions (aaaa)</string>
     <string name="qr_code">QR code</string>
     <string name="read_receipts">Send read receipts (✓✓)</string>
     <string name="read_receipts_text">Mutual, like in other messengers: if it is off, you also won’t see whether others have read your messages. Read receipts are never sent to message requests.</string>

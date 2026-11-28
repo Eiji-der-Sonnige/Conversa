@@ -96,7 +96,7 @@ fun LoginScreen(vm: MainViewModel) {
                 visualTransformation = transform,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
-            val problem = if (pw.isEmpty()) null else KeyDerivation.passwordProblem(pw.toCharArray())?.let { stringResource(it) }
+            val problem = if (pw.isEmpty()) null else KeyDerivation.passwordProblem(pw.toCharArray(), user)?.let { stringResource(it) }
             Text(
                 problem ?: stringResource(R.string.password_ok),
                 color = if (problem == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,

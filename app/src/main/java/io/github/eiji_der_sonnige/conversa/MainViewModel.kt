@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa
 
+import io.github.eiji_der_sonnige.conversa.crypto.KdfVersion
 import io.github.eiji_der_sonnige.conversa.R
 import android.app.Application
 import android.net.Uri
@@ -89,7 +90,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         if (newAccount) {
-            KeyDerivation.passwordProblem(password)?.let { _error.value = ctx.getString(it); return }
+            KeyDerivation.passwordProblem(password, user)?.let { _error.value = ctx.getString(it); return }
             if (confirm == null || !password.contentEquals(confirm)) {
                 _error.value = ctx.getString(R.string.err_pw_mismatch)
                 return
@@ -98,11 +99,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _busy.value = true
         viewModelScope.launch {
             try {
-                val identity = withContext(Dispatchers.Default) { KeyDerivation.derive(user, password) }
+                val (identity, m, account) = openAccount(user, password, newAccount)
                 password.fill('\u0000')
                 confirm?.fill('\u0000')
-                val m = withContext(Dispatchers.IO) { startMessenger(identity) }
-                val account = withContext(Dispatchers.IO) { m.fetchAccount() }
                 val totp = m.applyAccount(account)
                 if (newAccount && account == null) m.publishAccount()
                 if (totp != null) {
@@ -118,6 +117,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 _busy.value = false
             }
         }
+    }
+
+    /**
+     * Findet das Konto zu den Zugangsdaten. Bestehende Konten nutzen die alte Schlüsselableitung (V1), neue Konten
+     * ab 1.4 die stärkere (V2). Da es keinen Server gibt, der die Version kennt, wird zuerst V1 versucht (alle
+     * bisherigen Konten), dann V2. Gibt es keins von beiden, entsteht beim Erstellen ein neues V2-Konto; bei
+     * einer reinen Anmeldung bleibt es wie bisher bei V1 (z. B. falls die Relays das Konto-Event gelöscht haben).
+     */
+    private suspend fun openAccount(user: String, password: CharArray, newAccount: Boolean): Triple<Identity, Messenger, JSONObject?> {
+        val v1 = withContext(Dispatchers.Default) { KeyDerivation.derive(user, password, KdfVersion.V1) }
+        val m1 = withContext(Dispatchers.IO) { startMessenger(v1) }
+        val acc1 = withContext(Dispatchers.IO) { m1.fetchAccount() }
+        if (acc1 != null) return Triple(v1, m1, acc1)
+        val v2 = withContext(Dispatchers.Default) { KeyDerivation.derive(user, password, KdfVersion.V2) }
+        val m2 = withContext(Dispatchers.IO) { startMessenger(v2) }
+        val acc2 = withContext(Dispatchers.IO) { m2.fetchAccount() }
+        if (acc2 != null || newAccount) return Triple(v2, m2, acc2)
+        val m = withContext(Dispatchers.IO) { startMessenger(v1) }
+        return Triple(v1, m, null)
     }
 
     private suspend fun finishLogin(identity: Identity) {

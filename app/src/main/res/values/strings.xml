@@ -220,8 +220,11 @@
     <string name="privacy_short">Datenschutz</string>
     <string name="project">Projekt</string>
     <string name="project_value">Nicht-kommerzielles Hobbyprojekt</string>
-    <string name="pw_classes">Mindestens 3 von: Kleinbuchstaben, Großbuchstaben, Ziffern, Sonderzeichen</string>
+    <string name="pw_classes">Mindestens 3 von: Kleinbuchstaben, Großbuchstaben, Ziffern, Sonderzeichen (ab 20 Zeichen genügen 2)</string>
+    <string name="pw_common">Zu leicht zu erraten: ein gängiges Wort mit Zahlen/Zeichen (z. B. „Sommer2026!“). Tipp: mehrere zufällige Wörter</string>
+    <string name="pw_contains_username">Das Passwort darf den Benutzernamen nicht enthalten</string>
     <string name="pw_min_length">Mindestens 12 Zeichen</string>
+    <string name="pw_pattern">Zu leicht zu erraten: keine Folgen (1234, qwertz) oder Wiederholungen (aaaa)</string>
     <string name="qr_code">QR-Code</string>
     <string name="read_receipts">Lesebestätigungen senden (✓✓)</string>
     <string name="read_receipts_text">Wie bei anderen Messengern gegenseitig: Ist es aus, siehst du auch nicht, ob andere deine Nachrichten gelesen haben. An Nachrichtenanfragen werden nie Bestätigungen gesendet.</string>
