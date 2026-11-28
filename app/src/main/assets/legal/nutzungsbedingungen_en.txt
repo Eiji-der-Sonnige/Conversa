@@ -36,6 +36,8 @@ Conversa is designed for anonymity and end-to-end encryption. However, complete 
 - In calls without a TURN server, the other person sees your IP address.
 - Text messages have no forward secrecy: if the password becomes known, older messages stored on relays can be decrypted.
 - Two-factor authentication is only enforced within the app. It does not protect against people who know the username and password.
+- Deleted messages and groups are only removed on devices whose Conversa receives the deletion. Others may have saved or photographed content beforehand, and encrypted copies may remain on relays. In groups, only an admin can delete the content for everyone (by deleting the group).
+- Received files may be harmful. Conversa does not open them itself; opening them is at your own risk.
 - The software has not undergone an independent security audit and has so far been checked mainly by automated tests.
 Use is at your own risk. For particularly sensitive communication, audited solutions should be used in addition.
 

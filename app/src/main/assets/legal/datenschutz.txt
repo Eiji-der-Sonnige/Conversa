@@ -1,5 +1,5 @@
 DATENSCHUTZHINWEISE
-Stand: 27.11.2026
+Stand: 28.11.2026
 
 1. Grundsatz
 Conversa ist ein nicht-kommerzielles Open-Source-Hobbyprojekt. Die Entwickler betreiben keine Server und erhalten keinerlei Daten der Nutzer – weder Kontodaten noch Nachrichten, Kontakte, Medien, IP-Adressen oder Nutzungsstatistiken. Sie erheben, speichern oder verarbeiten über die App keine personenbezogenen Daten.
@@ -9,7 +9,8 @@ Diese Hinweise dienen der Transparenz darüber, was die App auf dem Gerät tut u
 2. Verarbeitung auf dem Gerät
 Folgende Daten werden ausschließlich lokal auf dem Gerät gespeichert und mit einem Schlüssel aus dem Android Keystore (AES-256-GCM) verschlüsselt:
 - der aus Benutzername und Passwort abgeleitete private Schlüssel und der Benutzername,
-- Kontakte (öffentliche Schlüssel und selbst vergebene Namen),
+- Kontakte (öffentliche Schlüssel und selbst vergebene Namen), nur lokal vergebene Anzeigenamen und blockierte Absender,
+- Gruppen (Name, Mitglieder, Admins als signierte Zustände),
 - Nachrichten samt Zustellstatus, die Kennungen gelöschter Nachrichten und der Zwischenspeicher für Medien,
 - das Geheimnis der Zwei-Faktor-Authentifizierung (falls aktiviert),
 - Netzwerkeinstellungen.
@@ -22,7 +23,7 @@ a) Nostr-Relays (voreingestellt: relay.damus.io, nos.lol, relay.primal.net, nost
 - IP-Adresse und Verbindungszeitpunkte,
 - der eigene öffentliche Schlüssel (pseudonyme Kennung) bei Abonnements,
 - Ende-zu-Ende-verschlüsselte Nachrichten-Hüllen („Gift Wraps“), die den öffentlichen Schlüssel des Empfängers enthalten, jedoch nicht den Absender, den Inhalt oder den genauen Zeitpunkt,
-- ein verschlüsseltes Konto-Event (Kontakte, 2FA-Einstellung), das nur mit dem eigenen Schlüssel lesbar ist, aber dem öffentlichen Schlüssel zugeordnet werden kann,
+- ein verschlüsseltes Konto-Event (Kontakte, blockierte Absender, bestätigte Gruppen, 2FA-Einstellung), das nur mit dem eigenen Schlüssel lesbar ist, aber dem öffentlichen Schlüssel zugeordnet werden kann. Nur lokal vergebene Anzeigenamen (Umbenennen) werden nicht übertragen,
 - ebenso verschlüsselt: Löschhinweise und Lesebestätigungen (siehe d).
 - Bei eingeschaltetem Hintergrundempfang besteht die Verbindung dauerhaft; die Relays sehen dadurch, wann das Gerät online ist.
 
@@ -37,6 +38,8 @@ c) STUN-Server für Anrufe (stun.l.google.com – Google LLC; stun.cloudflare.co
 d) Gesprächspartner
 - Lesebestätigungen (abschaltbar in den Einstellungen) teilen dem Gesprächspartner mit, dass und wann eine Nachricht gelesen wurde. An unbekannte Absender (Nachrichtenanfragen) werden keine Lesebestätigungen gesendet.
 - „Für alle löschen“ sendet dem Gesprächspartner die Aufforderung, eine Nachricht zu entfernen. Ob sein Gerät dem folgt, liegt außerhalb der Kontrolle der App; er kann die Nachricht bereits gesehen oder gespeichert haben.
+- In Gruppen erhalten alle aktuellen Mitglieder deine Nachrichten, deinen öffentlichen Schlüssel und die Mitgliederliste. Jede Gruppennachricht wird einzeln für jedes Mitglied verschlüsselt; Relays sehen keine Gruppe. Änderungen an der Gruppe (Einladen, Entfernen, Admins) sind von der handelnden Person signiert und für alle Mitglieder sichtbar.
+- Bei Dateien (nicht bei Fotos und Videos) wird der Dateiname verschlüsselt mitgesendet.
 - Bei direkten Peer-to-Peer-Anrufen erhält der Gesprächspartner die IP-Adresse. Dies lässt sich durch einen selbst eingetragenen TURN-Server mit der Option „Nur über TURN“ vermeiden; dann erhält der TURN-Betreiber die IP-Adresse.
 
 e) Tor (optional)
@@ -44,10 +47,10 @@ e) Tor (optional)
 
 4. Berechtigungen
 - Internet/Netzwerkstatus: Verbindung zu den oben genannten Servern.
-- Kamera und Mikrofon: für Anrufe und Sprachnachrichten, werden erst bei Bedarf angefragt.
+- Kamera und Mikrofon: für Anrufe und Sprachnachrichten sowie (Kamera) zum Scannen von QR-Codes, werden erst bei Bedarf angefragt. Das Bild des QR-Scanners wird nur auf dem Gerät ausgewertet, nicht gespeichert und nicht übertragen.
 - Benachrichtigungen: lokale Hinweise auf neue Nachrichten und eingehende Anrufe, ohne Inhalt und Absender.
 - Vordergrunddienst, Start nach dem Hochfahren, kurzzeitiges Wachhalten: nur für den optionalen Hintergrundempfang. Dabei werden keine zusätzlichen Daten erhoben.
-Für die Auswahl von Bildern und Videos wird die Android-Fotoauswahl verwendet; es ist kein Zugriff auf den gesamten Speicher nötig.
+Für die Auswahl von Bildern, Videos und Dateien sowie zum Speichern empfangener Dateien werden die Android-Foto- und Dateiauswahl verwendet; es ist kein Zugriff auf den gesamten Speicher nötig.
 
 5. Zwei-Faktor-Authentifizierung
 Bei Aktivierung wird ein Geheimnis erzeugt und in eine Authenticator-App (z. B. Google Authenticator) übernommen. Für deren Datenverarbeitung ist der jeweilige Anbieter verantwortlich.

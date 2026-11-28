@@ -21,8 +21,8 @@ android {
         applicationId = "io.github.eiji_der_sonnige.conversa"
         minSdk = 33
         targetSdk = 37
-        versionCode = 8
-        versionName = "1.3.0"
+        versionCode = 9
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

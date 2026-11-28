@@ -2,6 +2,43 @@
 
 Alle nennenswerten Änderungen an Conversa. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [1.4.0] – unveröffentlicht (Build 9)
+Gruppenchats, Dateien, QR-Scanner, englische Oberfläche und eine viel kleinere APK.
+Gruppenchats funktionieren nur, wenn **alle** Mitglieder 1.4.0 nutzen.
+
+### Neu
+- **Gruppenchats:** „+“ → „Gruppe erstellen“. Bis 32 Mitglieder und 5 Admins. Admins laden per Nutzer-ID oder
+  aus den Kontakten ein, entfernen Mitglieder, ernennen Admins, benennen um und löschen die Gruppe für alle. Nur der
+  Ersteller kann Admins absetzen; den Ersteller kann niemand entfernen. Vor dem Beitritt muss ein Hinweis bestätigt
+  werden (Löschen nur durch Admins, keine Löschgarantie im dezentralen Netz).
+  - Verschlüsselung nach NIP-17: jede Nachricht einzeln für jedes aktuelle Mitglied. Entfernte erhalten ab sofort
+    nichts Neues mehr; Relays sehen weder Gruppe noch Mitgliederliste.
+  - Jede Änderung ist ein signiertes Event mit Folgenummer; jedes Gerät prüft die Rechte selbst.
+- **Dateien beliebigen Typs** senden und empfangen. Empfangene Dateien werden nie automatisch geöffnet, sondern nur
+  auf Wunsch (mit Warnhinweis) an einem selbst gewählten Ort gespeichert; Dateinamen werden bereinigt.
+- **QR-Scanner** zum Hinzufügen von Kontakten und Einladen in Gruppen (Auswertung nur auf dem Gerät).
+- **Chat-Menü in der Chatliste:** lange drücken → „Chat umbenennen“ (nur lokal, wird nie gesendet) oder
+  „Chat löschen“ (mit Sicherheitsabfrage, entfernt auch zwischengespeicherte Medien).
+- **Blockieren** und **Spam-Schutz:** höchstens 30 offene Nachrichtenanfragen mit je 20 Nachrichten,
+  höchstens 10 offene Gruppeneinladungen; blockierte Absender verwaltbar unter Einstellungen.
+- **Englische Oberfläche** (folgt der Systemsprache), englische README und Rechtstexte (deutsche Fassung maßgeblich).
+
+### Verbessert
+- **APK pro Prozessortyp:** ca. 22 MB (arm64) statt 96 MB; zusätzlich eine Universal-APK.
+- **Schnellere Wiederverbindung:** ausgefallene Relays werden im Vordergrund nach 1, 2, 4, 8 s und dann alle 10 s
+  erneut versucht (vorher bis 60 s), beim Öffnen der App sofort.
+- Warnung vor Anrufen mit Tor ohne TURN-Server (Anrufe laufen nicht über Tor).
+- Kopierte Nachrichten werden als vertraulich markiert.
+- Abhängigkeiten aktualisiert: Bouncy Castle 1.87, OkHttp 4.12.1, Stream WebRTC 1.3.10.
+
+### Getestet (zwei Emulatoren, Android 17, Release-Build)
+- Gruppe erstellen, Einladung mit Hinweis annehmen, Nachrichten in beide Richtungen, Admin ernennen, Ersteller
+  nicht entfernbar, Mitglied entfernen (keine Eingabe mehr), verlassen; Neuanmeldung stellt Gruppen korrekt wieder
+  her, verlassene Gruppen bleiben weg
+- Chat lokal umbenennen und löschen; englische Oberfläche
+- Neuanmeldung mit Bouncy Castle 1.87 ergibt dieselbe Identität; Videoanruf mit WebRTC 1.3.10
+- QR-Scanner öffnet die Kamera (Auslesen per Unit-Test geprüft)
+
 ## [1.3.0] – 2026-11-27 (Build 8)
 Neue Funktionen: Sprachnachrichten, Löschen, Lesebestätigungen und Empfang im Hintergrund.
 „Für alle löschen“ und Lesebestätigungen funktionieren nur, wenn **beide** Gesprächspartner 1.3.0 nutzen.

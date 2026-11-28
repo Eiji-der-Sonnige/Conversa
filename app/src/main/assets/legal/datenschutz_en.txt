@@ -11,7 +11,8 @@ This notice explains what the app does on the device and which data it transmits
 2. Processing on the device
 The following data is stored only locally on the device and encrypted with a key from the Android Keystore (AES-256-GCM):
 - the private key derived from username and password, and the username,
-- contacts (public keys and names you chose yourself),
+- contacts (public keys and names you chose yourself), display names set only locally, and blocked senders,
+- groups (name, members, admins as signed states),
 - messages including delivery status, the IDs of deleted messages and the media cache,
 - the two-factor authentication secret (if enabled),
 - network settings.
@@ -24,7 +25,7 @@ a) Nostr relays (preset: relay.damus.io, nos.lol, relay.primal.net, nostr.mom, r
 - IP address and connection times,
 - your own public key (pseudonymous identifier) for subscriptions,
 - end-to-end encrypted message envelopes ("gift wraps") that contain the recipient's public key, but not the sender, the content or the exact time,
-- an encrypted account event (contacts, blocked senders, 2FA setting) that can only be read with your own key but can be linked to your public key,
+- an encrypted account event (contacts, blocked senders, confirmed groups, 2FA setting) that can only be read with your own key but can be linked to your public key. Display names set only locally (rename) are not transmitted,
 - also encrypted: deletion notices and read receipts (see d).
 - With background receiving enabled, the connection is permanent; the relays can therefore see when the device is online.
 
@@ -39,6 +40,8 @@ c) STUN servers for calls (stun.l.google.com – Google LLC; stun.cloudflare.com
 d) Chat partners
 - Read receipts (can be turned off in the settings) tell the other person that and when a message was read. No read receipts are sent to unknown senders (message requests).
 - "Delete for everyone" sends the other person a request to remove a message. Whether their device complies is outside the app's control; they may already have seen or saved the message.
+- In groups, all current members receive your messages, your public key and the member list. Every group message is encrypted individually for each member; relays see no group. Changes to the group (inviting, removing, admins) are signed by the person making them and visible to all members.
+- For files (not photos and videos), the file name is sent along, encrypted.
 - In direct peer-to-peer calls, the other person receives your IP address. This can be avoided with a TURN server you enter yourself and the option "TURN only"; the TURN operator then receives the IP address.
 
 e) Tor (optional)
@@ -46,10 +49,10 @@ e) Tor (optional)
 
 4. Permissions
 - Internet/network state: connection to the servers named above.
-- Camera and microphone: for calls and voice messages, requested only when needed.
+- Camera and microphone: for calls and voice messages and (camera) for scanning QR codes, requested only when needed. The QR scanner image is only analyzed on the device, not stored and not transmitted.
 - Notifications: local notices about new messages and incoming calls, without content or sender.
 - Foreground service, start after boot, briefly keeping the device awake: only for the optional background receiving. No additional data is collected.
-The Android photo picker is used to select images and videos; no access to the entire storage is needed.
+The Android photo and file pickers are used to select images, videos and files and to save received files; no access to the entire storage is needed.
 
 5. Two-factor authentication
 When enabled, a secret is generated and added to an authenticator app (e.g. Google Authenticator). The respective provider is responsible for its data processing.

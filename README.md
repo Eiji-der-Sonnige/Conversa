@@ -40,10 +40,13 @@ Non-commercial open-source hobby project · Apache License 2.0
 ## Features
 - Sign in with username + password only – no email, no phone number
 - Two-factor authentication (TOTP, e.g. Google Authenticator)
-- End-to-end encrypted text, image, video and voice messages (Nostr NIP-17/44/59)
+- End-to-end encrypted text, image, video and voice messages and files of any type (Nostr NIP-17/44/59)
+- Group chats (up to 32 members, up to 5 admins) with cryptographically signed admin rights
+- Add contacts by scanning their QR code
 - Delete messages for yourself or for everyone
 - Delivery status: ✓ delivered, ✓✓ read (read receipts can be turned off)
 - Spam protection for message requests, block senders
+- Long-press a chat to rename it (locally only) or delete it
 - Optional background receiving without Google services (uses some battery, see settings)
 - Voice and video calls directly peer-to-peer (WebRTC, DTLS-SRTP)
 - Decentralized via replaceable Nostr relays and Blossom media servers
@@ -75,6 +78,8 @@ technical reasons, these servers can see e.g. your IP address.
   services). With it, the permanent connection uses some battery (roughly 1–5 % per day, estimated).
 - "Delete for everyone" only removes the message for the other person if they use Conversa 1.3 or newer,
   and cannot prevent them from having seen or saved it before.
+- Groups: new members trust the inviting admin's member list when joining; deleting a group cannot
+  guarantee removal from every device and relay. All members need Conversa 1.4 or newer.
 - A lost password cannot be recovered.
 - 2FA is only a lock inside the app: anyone who knows username and password can access the account
   without 2FA. Use a long, unique password.

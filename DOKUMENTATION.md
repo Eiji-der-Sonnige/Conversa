@@ -1,11 +1,11 @@
 # Conversa – Dokumentation
 
-**Version:** 1.3.0 (Build 8)
+**Version:** 1.4.0 (Build 9)
 **Plattform:** Android 13 (API 33) bis aktuelle Android-Versionen (targetSdk 37)
-**Stand:** 27.11.2026
+**Stand:** 28.11.2026
 
 Conversa ist ein dezentraler Messenger, der auf Anonymität und Ende-zu-Ende-Verschlüsselung ausgelegt
-ist. Er unterstützt Textnachrichten, Bilder, Videos, Sprachnachrichten sowie Sprach- und Videoanrufe. Conversa ist ein nicht-kommerzielles Open-Source-Hobbyprojekt (Apache License 2.0). Die Entwickler betreiben
+ist. Er unterstützt Text-, Bild-, Video- und Sprachnachrichten, Dateien, Gruppenchats sowie Sprach- und Videoanrufe. Conversa ist ein nicht-kommerzielles Open-Source-Hobbyprojekt (Apache License 2.0). Die Entwickler betreiben
 keinen eigenen Server; für die Registrierung sind keine E-Mail-Adresse und keine Telefonnummer nötig.
 
 > **Wichtiger Hinweis:** Vollständige Anonymität und absolute Sicherheit können nicht garantiert werden.
@@ -49,7 +49,8 @@ keinen eigenen Server; für die Registrierung sind keine E-Mail-Adresse und kein
 | Anmeldung | Benutzername + Passwort; der Schlüssel wird lokal berechnet (kein Server) |
 | 2FA | TOTP, kompatibel mit Google Authenticator; Abfrage bei Login und App-Start |
 | Textchat | Ende-zu-Ende-verschlüsselt (NIP-44), Metadaten verborgen (Gift Wrap) |
-| Bilder & Videos | Lokal mit AES-256-GCM verschlüsselt, bis 50 MB pro Datei |
+| Bilder, Videos & Dateien | Lokal mit AES-256-GCM verschlüsselt, bis 50 MB pro Datei; Dateien beliebigen Typs werden nie automatisch geöffnet |
+| Gruppenchats | Bis 32 Mitglieder, bis 5 Admins; jede Nachricht einzeln für jedes Mitglied verschlüsselt (NIP-17); Admin-Rechte per Signatur geprüft |
 | Sprachnachrichten | Aufnahme bis 5 Minuten (AAC), verschlüsselt wie Bilder; Wiedergabe mit Fortschrittsbalken |
 | Löschen | Jede Nachricht „für mich“ oder (eigene) „für alle“ löschbar; gilt auch nach Neuanmeldung |
 | Zustellstatus | ✓ übermittelt, ✓✓ gelesen (Lesebestätigungen abschaltbar, gegenseitig); Zähler für Ungelesenes |
@@ -58,7 +59,9 @@ keinen eigenen Server; für die Registrierung sind keine E-Mail-Adresse und kein
 | Dezentralität | Mehrere unabhängige Nostr-Relays; Medien auf Blossom-Servern (austauschbare Voreinstellungen, von Dritten betrieben) |
 | Multi-Device | Gleiche Zugangsdaten = gleiches Konto; Verlauf und Kontakte werden synchronisiert, soweit die Relays sie speichern |
 | Datensparsamkeit | Keine persönlichen Daten zur Registrierung; pseudonyme Kennung (öffentlicher Schlüssel); optional Tor (Orbot) und TURN-only-Anrufe zum Verbergen der IP-Adresse |
-| Spam-Schutz | Unbekannte Absender erscheinen als „Nachrichtenanfrage“; Anrufe erst nach Annahme |
+| Spam-Schutz | Unbekannte Absender erscheinen als „Nachrichtenanfrage“ (höchstens 30, je 20 Nachrichten); Anrufe erst nach Annahme; Absender blockieren; höchstens 10 offene Gruppeneinladungen |
+| Chat-Menü | Lange auf einen Chat in der Liste drücken: umbenennen (nur lokal) oder löschen |
+| Sprachen | Deutsch und Englisch, folgt der Systemsprache |
 | Info & Rechtliches | Versionsnummer, Geräte- und Sicherheitsinfos, Nutzungsbedingungen, Datenschutzhinweise, vollständige Open-Source-Lizenztexte |
 
 ---
@@ -81,12 +84,15 @@ werden aus dem Netzwerk geladen (soweit die Relays sie noch speichern).
 
 ### 2.3 Kontakte hinzufügen
 1. **Einstellungen → Deine Kontakt-ID**: eigene ID (`npub1…`) kopieren oder QR-Code zeigen.
-2. Die andere Person tippt in der Chatliste auf **„+“**, fügt die ID ein und vergibt einen Namen.
-   Der Name ist nur lokal sichtbar.
+2. Die andere Person tippt in der Chatliste auf **„+“ → „Kontakt hinzufügen“**, fügt die ID ein oder
+   scannt den QR-Code (Scan-Symbol im Eingabefeld; das Kamerabild wird nur auf dem Gerät ausgewertet) und
+   vergibt einen Namen.
 
 ### 2.4 Chatten
 - Text eingeben und auf **Senden** tippen.
-- **Büroklammer**: Bild oder Video auswählen (Android-Fotoauswahl, keine Speicherberechtigung nötig).
+- **Büroklammer**: „Bild oder Video“ (Android-Fotoauswahl) oder „Datei“ (beliebiger Typ, Android-Dateiauswahl);
+  keine Speicherberechtigung nötig. Empfangene Dateien werden nur auf Wunsch nach einem Warnhinweis an einem
+  selbst gewählten Ort gespeichert, nie automatisch geöffnet.
 - **Mikrofon** (erscheint, solange das Textfeld leer ist): Sprachnachricht aufnehmen. Während der Aufnahme
   läuft ein Zähler; **Papierkorb** verwirft, **Senden** verschickt sie. Nach 5 Minuten wird automatisch gesendet.
   Verlässt man die App während der Aufnahme, wird sie verworfen.
@@ -96,7 +102,11 @@ werden aus dem Netzwerk geladen (soweit die Relays sie noch speichern).
   allen eigenen Geräten, „Für alle löschen“ (nur eigene, bereits übermittelte Nachrichten) zusätzlich beim
   Gesprächspartner.
 - In der Chatliste zeigt eine Zahl die ungelesenen Nachrichten.
-- Menü (⋮): Kontakt umbenennen oder Kontakt und Chat löschen.
+- Menü (⋮): Kontakt umbenennen, Kontakt und Chat löschen oder **blockieren** (weitere Nachrichten, Anrufe und
+  Anfragen werden ignoriert; aufheben unter Einstellungen → Blockiert).
+- **Chatliste, lange auf einen Chat drücken:** „Chat umbenennen“ ändert nur den Anzeigenamen auf diesem Gerät
+  (er wird nie gesendet, auch nicht verschlüsselt). „Chat löschen“ entfernt nach einer Sicherheitsabfrage alle
+  Nachrichten und zwischengespeicherten Medien auf deinen Geräten (auch nach Neuanmeldung), optional samt Kontakt.
 
 ### 2.5 Anrufen
 Im Chat auf **Hörer** (Sprachanruf) oder **Kamera** (Videoanruf) tippen. Während des Gesprächs stehen
@@ -120,7 +130,20 @@ die Hintergrund-Apps besonders aggressiv beenden (z. B. Xiaomi, Huawei, teils Sa
 Netz (WLAN ist sparsamer als Mobilfunk) und Nachrichtenmenge. Ohne die Option kommen Nachrichten nur an,
 solange die App geöffnet ist oder noch kurz im Hintergrund läuft.
 
-### 2.8 Abmelden
+### 2.8 Gruppenchats
+- **Erstellen:** „+“ → „Gruppe erstellen“, Namen eingeben, Kontakte auswählen und/oder weitere Nutzer-IDs
+  (npub, eine pro Zeile, auch per QR-Scan). Du wirst Ersteller und Admin.
+- **Beitreten:** Eingeladene sehen die Gruppe als „Gruppeneinladung“. Vor dem Beitritt erscheint ein Hinweis,
+  der bestätigt werden muss: Man kann die Inhalte nicht für andere löschen, das können nur die Admins (indem sie
+  die Gruppe löschen), und Löschen ist im dezentralen Netz nicht überall garantiert. „Ablehnen“ verlässt die Gruppe.
+- **Gruppeninfo** (Gruppensymbol oben rechts): Mitglieder mit Rollen. Admins können einladen, entfernen,
+  zu Admins machen (höchstens 5), den Namen ändern und die Gruppe für alle löschen. Nur der Ersteller kann
+  anderen Admins die Rechte entziehen oder Admins entfernen; den Ersteller kann niemand entfernen. Jeder kann
+  die Gruppe verlassen (außer dem Ersteller, der sie nur löschen kann) und Admins können ihre Rechte abgeben.
+- In Gruppen gibt es keine Lesebestätigungen und kein „Für alle löschen“ einzelner Nachrichten.
+- Alle Mitglieder brauchen Conversa 1.4 oder neuer.
+
+### 2.9 Abmelden
 **Einstellungen → „Abmelden & lokale Daten löschen“** löscht alle lokalen Daten und den Keystore-Schlüssel.
 
 ---
@@ -185,16 +208,20 @@ app/src/main/java/io/github/eiji_der_sonnige/conversa/
 ├── call/CallManager.kt       WebRTC-Anrufe, Signalisierung
 ├── core/
 │   ├── Messenger.kt          Senden/Empfangen, Löschen, Lesebestätigungen, Kontosynchronisation
+│   ├── GroupRules.kt         Signierte Gruppenzustände und Rechteprüfung
+│   ├── GroupService.kt       Gruppen: Empfang, Prüfung, Verteilung (NIP-17-Fan-out)
 │   ├── Session.kt            App-weit laufender Messenger (unabhängig von der Activity)
 │   ├── ConnectionService.kt  Optionaler Hintergrunddienst, Herzschlag-Wecker, Neustart nach Boot/Update
 │   └── Notifier.kt           Benachrichtigungen ohne Inhalt (Nachrichten, Anrufe, Dienst)
 └── ui/                       Compose-Bildschirme
     ├── Root.kt, LoginScreen.kt, TotpScreens.kt, ChatListScreen.kt,
-    ├── ChatScreen.kt, VoiceUi.kt, CallScreen.kt, SettingsScreen.kt, Common.kt
+    ├── ChatScreen.kt, VoiceUi.kt, CallScreen.kt, SettingsScreen.kt, Common.kt,
+    ├── GroupInfoScreen.kt, QrScanner.kt
 
-app/src/test/java/io/github/eiji_der_sonnige/conversa/               Unit-Tests (Krypto, Mediendaten, Nachrichtenstatus)
+app/src/test/java/io/github/eiji_der_sonnige/conversa/               Unit-Tests (Krypto, Gruppenrechte, Mediendaten, Dateinamen, QR, Relay-Wiederverbindung)
 app/src/main/res/xml/network_security_config.xml       Nur TLS
 app/src/main/res/xml/data_extraction_rules.xml         Keine Backups
+app/src/main/res/values(-en)/strings.xml               Texte Deutsch (Standard) und Englisch
 ```
 
 ---
@@ -308,8 +335,9 @@ wss://relay.snort.social
 > unabhängigen Dritten betrieben. Die Entwickler von Conversa betreiben sie nicht und haben keinen Einfluss auf
 > ihre Verfügbarkeit, Speicherdauer, Inhalte oder Datenverarbeitung. Die Liste kann in den Einstellungen
 > beliebig geändert werden, z. B. auf selbst betriebene Relays.
-Die App verbindet sich mit allen gleichzeitig. Bei Verbindungsabbruch wird automatisch neu verbunden
-(exponentielles Backoff 4 s bis 60 s). Events werden an alle verbundenen Relays gesendet und gepuffert,
+Die App verbindet sich mit allen gleichzeitig. Bei Verbindungsabbruch wird automatisch neu verbunden:
+im Vordergrund nach 1, 2, 4, 8 s, danach alle 10 s; im Hintergrund höchstens alle 60 s (Akku). Beim Öffnen
+der App werden fehlende Relays sofort neu verbunden. Events werden an alle verbundenen Relays gesendet und gepuffert,
 falls gerade keines erreichbar ist.
 
 ### 8.3 Verwendete Event-Arten
@@ -322,7 +350,11 @@ falls gerade keines erreichbar ist.
 | 5 | Löschung (Rumor, Tags `["e", <Nachrichten-ID>]`), an sich selbst und bei „für alle“ an den Partner | nein |
 | 25051 | Lesebestätigung (Rumor, Tags `["e", <ID>]`), nur an den Partner, Gift Wrap läuft nach 30 Tagen ab | nein |
 | 25050 | Anruf-Signalisierung (Rumor), Gift Wrap läuft nach 120 s ab | nein |
-| 30078 | Konto-Daten (Kontakte, 2FA), NIP-44 an sich selbst | nur Autor; d-Tag ist ein undurchsichtiger Hash |
+| 30078 | Konto-Daten (Kontakte, blockierte Absender, bestätigte Gruppen, 2FA), NIP-44 an sich selbst | nur Autor; d-Tag ist ein undurchsichtiger Hash |
+| 14/15 mit Tag `g` | Gruppennachricht (Rumor mit `p`-Tag je Mitglied und Gruppen-ID), einzeln an jedes Mitglied verpackt | nein |
+| 25070 | Gruppenzustand (Rumor mit signiertem Zustand + Gründung), an alle alten und neuen Mitglieder | nein |
+| 25071 | Signierter Gruppenzustand (im Rumor 25070): Name, Ersteller, Admins, Mitglieder, Folgenummer, Vorgänger | nein |
+| 25072 | „Gruppe verlassen/lokal gelöscht“, nur an die eigenen Geräte | nein |
 | 24242 | Blossom-Upload-Autorisierung (Einmal-Schlüssel) | nur Medien-Server |
 
 ### 8.4 Abonnement
@@ -371,6 +403,34 @@ Netzwechsel (z. B. WLAN → Mobilfunk) wird sofort neu verbunden.
 
 **Lesebestätigungen** werden nur an angenommene Kontakte gesendet, nie an Nachrichtenanfragen, und nur
 für Nachrichten der letzten 30 Tage. Wer sie abschaltet, sieht auch die der anderen nicht.
+
+### 9.1 Gruppenchats (Aufbau und Sicherheit)
+
+**Verschlüsselung.** Wie in NIP-17 vorgesehen wird jede Gruppennachricht einzeln für jedes aktuelle Mitglied
+als Gift Wrap verpackt (plus eine Kopie für die eigenen Geräte). Es gibt **keinen gemeinsamen Gruppenschlüssel**.
+Wer entfernt wird, erhält ab diesem Moment schlicht keine neuen Nachrichten mehr. Der Effekt entspricht einer
+„Schlüsselerneuerung“, ohne dass ein alter Schlüssel weiterhin nutzbar wäre. Relays sehen wie bei 1:1-Chats nur
+einzelne Empfänger-Schlüssel, aber keine Gruppe und keine Mitgliederliste. Ein gemeinsamer Gruppenschlüssel wurde
+bewusst verworfen: Dafür müssten alle Mitglieder dieselbe Gruppenadresse abonnieren, und Relays könnten daran die
+Mitgliederliste erkennen.
+
+**Signierte Admin-Rechte.** Jeder Gruppenzustand (Name, Ersteller, Admins, Mitglieder, gelöscht ja/nein) ist ein
+von der handelnden Person signiertes Nostr-Event (Kind 25071) mit fortlaufender Nummer und Verweis auf den
+Vorgänger. Die **Gruppen-ID ist die Event-ID der Gründung**, die nur der Ersteller signieren kann. Jedes Gerät
+prüft jede Änderung selbst (`core/GroupRules.kt`, mit Unit-Tests):
+- nur Admins laden ein, entfernen, ernennen Admins (höchstens 5), benennen um und löschen;
+- nur der Ersteller setzt andere Admins ab oder entfernt sie; der Ersteller bleibt immer Mitglied und Admin;
+- jedes Mitglied darf sich selbst entfernen (verlassen), sonst nichts;
+- höchstens 32 Mitglieder; nach dem Löschen sind keine Änderungen mehr möglich.
+Gleichzeitige Änderungen zweier Admins werden auf allen Geräten gleich aufgelöst (der Zustand mit der kleineren ID gilt).
+
+**Grenzen (ehrlich):**
+- Neue Mitglieder prüfen beim Beitritt Signatur, Ersteller-Bindung und Admin-Status des Einladenden, aber nicht die
+  gesamte frühere Änderungskette („Vertrauen beim Beitritt“).
+- Den Zeitpunkt einer Nachricht legt der Absender fest; ein Entfernter könnte eine Nachricht auf „vor dem Austritt“ datieren.
+- Löschen (Gruppe für alle löschen) wirkt nur auf Geräten mit Conversa, die die Löschung empfangen. Kopien,
+  Screenshots und verschlüsselte Daten auf Relays lassen sich nicht garantiert entfernen.
+- Neue Mitglieder können frühere Nachrichten nicht lesen (sie wurden nicht für sie verschlüsselt).
 
 ---
 
@@ -429,7 +489,7 @@ Kontakten werden ignoriert.
 | Nostr-Relays | Gift Wraps (Nachrichten), Konto-Event | NIP-44 / Gift Wrap |
 | Blossom-Server | Mediendateien | AES-256-GCM |
 | `files/secure/session.json` | privater Schlüssel, Benutzername | Keystore AES-256-GCM |
-| `files/secure/chats_<id>.json` | Kontakte, Nachrichten samt Status, IDs gelöschter Nachrichten, 2FA-Cache, Sync-Zeitpunkt | Keystore AES-256-GCM |
+| `files/secure/chats_<id>.json` | Kontakte, lokale Anzeigenamen, blockierte Absender, Gruppen (signierte Zustände), Nachrichten samt Status, IDs gelöschter Nachrichten und Gruppen, 2FA-Cache, Sync-Zeitpunkt | Keystore AES-256-GCM |
 | `files/secure/settings.json` | Netzwerkeinstellungen | Keystore AES-256-GCM |
 | `cache/media_enc/` | heruntergeladene Medien (verschlüsselt) | AES-256-GCM |
 | `cache/media_tmp/` | entschlüsselte Videos/Sprachnachrichten zur Wiedergabe | App-Sandbox, wird nach der Wiedergabe bzw. beim Start gelöscht |
@@ -455,10 +515,14 @@ Die folgenden Maßnahmen reduzieren Risiken, schließen sie aber nicht vollstän
 - Keine Backups (`allowBackup=false`, Datenextraktionsregeln schließen alles aus).
 - Nur TLS-Verbindungen, nur System-Zertifikate (`network_security_config.xml`).
 - Benachrichtigungen ohne Inhalt und Absender (`VISIBILITY_PRIVATE`).
-- 2FA-Geheimnis wird in der Zwischenablage als sensibel markiert.
 - Starke Passwortregeln, speicherharte Schlüsselableitung (Argon2id).
 - Rate-Limiting bei 2FA-Codes.
-- Spam-/Belästigungsschutz durch Nachrichtenanfragen.
+- Spam-/Belästigungsschutz durch Nachrichtenanfragen mit Obergrenzen, Blockieren und begrenzte Gruppeneinladungen.
+- Gruppenrechte werden kryptografisch (Signaturen) auf jedem Gerät geprüft, nicht nur in der Oberfläche.
+- Empfangene Dateinamen werden bereinigt (keine Pfade, keine versteckten Richtungszeichen); Dateien werden nie
+  automatisch geöffnet.
+- Warnung vor Anrufen mit Tor ohne TURN-Server (Anrufe laufen nicht über Tor).
+- Kopierte Nachrichten und das 2FA-Geheimnis werden in der Zwischenablage als vertraulich markiert.
 - Optional: Tor (Orbot) für alle Verbindungen, TURN-only-Anrufe zum Verbergen der IP-Adresse.
 - Keine Werbung, kein Tracking, keine Analyse, keine Google-Dienste.
 
@@ -470,7 +534,7 @@ Die folgenden Maßnahmen reduzieren Risiken, schließen sie aber nicht vollstän
 |---|---|
 | Deine Kontakt-ID | npub als QR-Code und Text, kopieren |
 | 2FA | aktivieren / deaktivieren |
-| Privatsphäre & Empfang | Lesebestätigungen senden (Standard: an); im Hintergrund verbunden bleiben (Standard: aus, mit Akku-Hinweis); Akku-Optimierung ausschalten |
+| Privatsphäre & Empfang | Lesebestätigungen senden (Standard: an); im Hintergrund verbunden bleiben (Standard: aus, mit Akku-Hinweis); Akku-Optimierung ausschalten; blockierte Absender verwalten |
 | Netzwerk | Relay-Liste (`wss://`), Medien-Server (`https://`), Tor über Orbot (SOCKS `127.0.0.1:9050`) |
 | Anrufe | TURN-URL, -Benutzer, -Passwort; „Nur über TURN“ |
 | Info | Version, Build, Gerät, Android-Version, Installations-/Update-Datum, Paketname, Relay-Status, Verschlüsselungsverfahren, Open-Source-Lizenzen |
@@ -486,7 +550,7 @@ Lesebestätigungen und Hintergrundempfang gelten sofort, ohne Neuverbindung.
 | Berechtigung | Zweck |
 |---|---|
 | `INTERNET`, `ACCESS_NETWORK_STATE` | Relays, Medien-Server, Anrufe |
-| `CAMERA` | Videoanrufe (wird erst beim Anruf angefragt) |
+| `CAMERA` | Videoanrufe und QR-Scanner (wird erst bei Bedarf angefragt; das Scan-Bild wird nur lokal ausgewertet) |
 | `RECORD_AUDIO` | Anrufe und Sprachnachrichten (wird erst bei Bedarf angefragt) |
 | `MODIFY_AUDIO_SETTINGS` | Lautsprecher/Hörer umschalten |
 | `POST_NOTIFICATIONS` | Hinweis auf neue Nachrichten und eingehende Anrufe |
@@ -496,7 +560,8 @@ Lesebestätigungen und Hintergrundempfang gelten sofort, ohne Neuverbindung.
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | auf Wunsch: Systemdialog „Akku-Optimierung ausschalten“ öffnen |
 | `USE_FULL_SCREEN_INTENT` | eingehenden Anruf bei ausgeschaltetem Bildschirm anzeigen |
 
-Für die Medienauswahl ist keine Speicherberechtigung nötig (Android-Fotoauswahl).
+Für die Auswahl von Medien und Dateien und das Speichern empfangener Dateien ist keine Speicherberechtigung nötig
+(Android-Foto- und Dateiauswahl).
 
 ---
 
@@ -514,9 +579,12 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 # Debug-APK  ->  app\build\outputs\apk\debug\app-debug.apk
 .\gradlew.bat :app:assembleDebug
 
-# Release-APK (vor Veröffentlichung signieren!)
+# Release-APKs (vor Veröffentlichung signieren!)
 .\gradlew.bat :app:assembleRelease
 ```
+Das Release erzeugt eine APK pro Prozessortyp (`app-arm64-v8a-release.apk`, `app-armeabi-v7a-release.apk`,
+`app-x86_64-release.apk`) und eine `app-universal-release.apk`. R8 entfernt dabei nur ungenutzten
+Bibliothekscode (keine Optimierung, keine Umbenennung, siehe `app/proguard-rules.pro`).
 
 **Release signieren:**
 1. Einmalig einen Signaturschlüssel erzeugen (außerhalb des Projektordners speichern, z. B.
@@ -529,7 +597,7 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
    ```
 2. `keystore.properties.example` nach `keystore.properties` kopieren und ausfüllen
    (Pfade mit `/` schreiben). Diese Datei ist in `.gitignore` und wird nie hochgeladen.
-3. `.\gradlew.bat :app:assembleRelease` → `app\build\outputs\apk\release\app-release.apk`
+3. `.\gradlew.bat :app:assembleRelease` → `app\build\outputs\apk\release\app-<abi>-release.apk`
 4. Schlüsseldatei und Passwörter sicher sichern (z. B. Passwort-Manager + USB-Stick). Ohne diesen
    Schlüssel können keine Updates mehr veröffentlicht werden, die sich über die alte Version
    installieren lassen.
@@ -561,7 +629,8 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
 - **Bilder von bekannten Kontakten** werden automatisch von der Adresse geladen, die der Absender
   angibt; dieser Server sieht dabei die IP-Adresse (ohne Tor). Bei Nachrichtenanfragen erst nach Tippen.
 - **Tor und Anrufe:** Anrufe laufen nicht über Tor. Mit Tor und eingetragenem TURN-Server wird
-  „Nur über TURN“ automatisch erzwungen; ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
+  „Nur über TURN“ automatisch erzwungen; ohne TURN-Server sieht der Gesprächspartner die IP-Adresse
+  (die App warnt vor dem Anruf).
 - **Keine Forward Secrecy für Textnachrichten:** NIP-44 nutzt statische Schlüssel. Wird das Passwort
   kompromittiert, sind auf Relays gespeicherte alte Nachrichten lesbar. (Anrufe haben Forward Secrecy.)
 - **Empfang im Hintergrund nur mit eingeschaltetem Hintergrunddienst:** Es gibt keine Push-Benachrichtigungen
@@ -574,10 +643,11 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
 - **Lesebestätigungen verraten**, wann du eine Nachricht gelesen hast (abschaltbar).
 - **IP-Adresse bei Anrufen:** Ohne TURN-Server sieht der Gesprächspartner die IP-Adresse.
 - **Datenhaltung:** Öffentliche Relays und Medien-Server können alte Daten löschen oder Größenlimits haben.
-- **Nur 1:1-Chats**, keine Gruppen.
+- **Gruppen:** siehe Grenzen in Abschnitt 9.1. Höchstens 32 Mitglieder (jede Nachricht wird einzeln für
+  jedes Mitglied verschlüsselt, das kostet bei großen Gruppen Rechenzeit und Datenvolumen).
 - **Krypto-Implementierung:** secp256k1 basiert auf Bouncy Castle und ist nicht garantiert
   „constant-time“. Kein unabhängiges Sicherheits-Audit.
-- **APK-Größe** ca. 113 MB (WebRTC für alle CPU-Architekturen).
+- **APK-Größe** ca. 22 MB (arm64), 17 MB (armeabi-v7a), 23 MB (x86_64), 42 MB (universal).
 - Getestet mit Unit-Tests, mit zwei Emulatoren (Android 17) und vom Projektinhaber auf echten Geräten.
   Sprachnachrichten wurden im Emulator nur mit stummer Aufnahme geprüft (kein Mikrofon).
 
@@ -588,12 +658,10 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
 - UnifiedPush als akkusparendere Alternative zum Hintergrunddienst
 - Double-Ratchet-Protokoll (Forward Secrecy für Nachrichten)
 - Native `libsecp256k1` statt Bouncy Castle
-- QR-Code-Scanner zum Hinzufügen von Kontakten
-- Gruppenchats (NIP-17 unterstützt mehrere Empfänger)
-- Dateien beliebigen Typs
+- Vollständige, signierte Änderungskette beim Gruppenbeitritt bzw. MLS für Gruppen
+- Stärkere Schlüsselableitung bzw. KDF-Migration (siehe Offline-Rateangriffe)
 - Biometrische App-Sperre
 - Sicherheitsnummern-Vergleich zur Kontaktverifizierung
-- ABI-Splits / App Bundle zur Verkleinerung der APK
 - Eigener Relay- und Blossom-Server für volle Kontrolle
 
 ---
@@ -606,10 +674,11 @@ Kontakt-IDs austauschen, Nachrichten, Medien und Anrufe ausprobieren.
 | AndroidX Core / Activity / Lifecycle | 1.19.1 / 1.13.0 / 2.11.1 | Apache 2.0 |
 | Material Icons Extended | 1.7.8 | Apache 2.0 |
 | Kotlin Coroutines | 1.10.2 | Apache 2.0 |
-| OkHttp | 4.12.0 | Apache 2.0 |
-| Bouncy Castle (bcprov-jdk18on) | 1.80 | MIT |
-| stream-webrtc-android | 1.3.8 | BSD-3-Clause / Apache 2.0 |
+| OkHttp | 4.12.1 | Apache 2.0 |
+| Bouncy Castle (bcprov-jdk18on) | 1.87 | MIT |
+| stream-webrtc-android | 1.3.10 | BSD-3-Clause / Apache 2.0 |
 | ZXing Core | 3.5.3 | Apache 2.0 |
+| AndroidX CameraX (camera2, lifecycle, view) | 1.4.2 | Apache 2.0 |
 
 Weitere indirekte Abhängigkeiten (alle Apache 2.0): Okio 3.6.0, Guava ListenableFuture, JSpecify,
 JetBrains Annotations.
@@ -628,6 +697,7 @@ RFC 6238, RFC 7539, RFC 5869, RFC 9106 (Argon2), Blossom BUD-01/02.
 
 | Version | Build | Änderungen |
 |---|---|---|
+| 1.4.0 | 9 | Gruppenchats mit signierten Admin-Rechten (NIP-17-Fan-out, bis 32 Mitglieder, 5 Admins); Dateien beliebigen Typs; QR-Scanner für Kontakt-IDs; Chat-Menü in der Chatliste (umbenennen nur lokal, löschen); Spam-Limits und Blockieren; englische Oberfläche und README; APK pro Prozessortyp (~22 statt 96 MB); schnellere Wiederverbindung zu Relays; Abhängigkeiten aktualisiert; Warnung bei Anrufen mit Tor ohne TURN |
 | 1.3.0 | 8 | Sprachnachrichten; Nachrichten für mich oder für alle löschen; Lesebestätigungen (✓✓, abschaltbar) und Zähler für Ungelesenes; optionaler Hintergrundempfang mit Akku-Hinweis, Neustart nach Handy-Neustart/Update; eingehende Anrufe klingeln auch bei geschlossener App; gebündelter Herzschlag und sofortige Neuverbindung bei Netzwechsel; spät bestätigte Nachrichten wechseln von ⚠ auf ✓; Tastatur verdeckt beim Anruf nicht mehr die Knöpfe |
 | 1.2.3 | 7 | Sprach- und Videoanrufe repariert (doppelt verarbeitetes Anrufsignal); ICE-Kandidaten vor dem Angebot gehen nicht mehr verloren; Verbindungs-Zeitlimit; Netzwerkzeit für Anrufsignale |
 | 1.2.2 | 6 | Sicherheitsupdate: 2FA lässt sich nicht mehr per Login im Flugmodus überspringen; „Konto erstellen“ überschreibt kein bestehendes Konto mehr; Prüfung empfangener Mediendaten (Pfadmanipulation, Größenlimit); Bilder aus Nachrichtenanfragen erst nach Tippen; zu lange Nachrichten werden abgelehnt statt zu hängen; mit Tor wird TURN erzwungen; ehrlichere Beschreibung der 2FA-Grenzen |
@@ -685,6 +755,10 @@ angebotene digitale Dienste. Ein rein privates, nicht-kommerzielles Hobbyprojekt
 Gewinnerzielungsabsicht fällt nach überwiegender Auffassung **nicht** darunter. Conversa enthält daher
 **kein Impressum**.
 
+Offen ist, ob für das öffentliche GitHub-Repository eine Anbieterkennzeichnung nach **§ 18 Abs. 1 MStV**
+(Name und Anschrift bei Telemedien, die nicht ausschließlich persönlichen oder familiären Zwecken dienen) nötig
+ist. Das ist für Repositories auf fremden Plattformen nicht geklärt und sollte anwaltlich geprüft werden.
+
 Das kann sich ändern, wenn das Projekt geschäftsmäßig wird, z. B. durch Werbung, kostenpflichtige
 Funktionen, regelmäßige Einnahmen (auch über Spendenplattformen) oder die Nutzung zur Werbung für eigene
 berufliche Leistungen. Dann sollte die Frage neu geprüft werden.
@@ -701,6 +775,8 @@ Anschriften.
 - Die neue EU-Produkthaftungsrichtlinie (EU) 2024/2853 bezieht Software ein, nimmt aber
   **freie und quelloffene Software, die außerhalb einer Geschäftstätigkeit entwickelt oder
   bereitgestellt wird**, ausdrücklich aus.
+- In Deutschland setzt das neue Produkthaftungsgesetz die Richtlinie um (gilt ab 9. Dezember 2026), mit derselben
+  Ausnahme für nicht-kommerzielle Open-Source-Software.
 - Der Cyber Resilience Act (EU) 2024/2847 gilt für Produkte, die im Rahmen einer **Geschäftstätigkeit**
   auf den Markt gebracht werden; nicht-kommerzielle Open-Source-Software ist davon ausgenommen.
 - Beide Ausnahmen setzen voraus, dass das Projekt **nicht kommerziell** bleibt.
@@ -727,7 +803,8 @@ Anschriften.
 ### 21.9 Dateien für das GitHub-Repository
 | Datei | Zweck |
 |---|---|
-| `README.md` | Projektbeschreibung mit deutlichem Haftungs- und Nutzungshinweis |
+| `README.md` | Projektbeschreibung (Englisch) mit deutlichem Haftungs- und Nutzungshinweis |
+| `README.de.md` | Projektbeschreibung (Deutsch) |
 | `LICENSE` | Apache License 2.0 |
 | `NOTICE` | Copyright und Verweis auf Drittlizenzen |
 | `SECURITY.md` | Vertrauliches Melden von Sicherheitslücken |
