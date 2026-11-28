@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen an Conversa. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [1.4.0] – unveröffentlicht (Build 9)
+## [1.4.0] – 2026-11-28 (Build 9)
 Gruppenchats, Dateien, QR-Scanner, englische Oberfläche und eine viel kleinere APK.
 Gruppenchats funktionieren nur, wenn **alle** Mitglieder 1.4.0 nutzen.
 
