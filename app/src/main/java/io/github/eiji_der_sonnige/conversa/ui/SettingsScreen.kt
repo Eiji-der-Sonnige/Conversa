@@ -125,6 +125,8 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (current.background) BatteryOptimizationRow()
+                HorizontalDivider()
+                BlockedRow(m)
             }
 
             Section("Netzwerk (dezentral)") {
@@ -339,6 +341,41 @@ private fun BatteryOptimizationRow() {
                 launcher.launch(android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             }
         }) { Text("Akku-Optimierung ausschalten") }
+    }
+}
+
+/** Blockierte Absender anzeigen und Sperre aufheben. */
+@Composable
+private fun BlockedRow(m: Messenger) {
+    val blocked by m.store.blocked.collectAsState()
+    var open by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text("Blockiert: ${blocked.size}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        if (blocked.isNotEmpty()) TextButton({ open = true }) { Text("Verwalten") }
+    }
+    Text(
+        "Spam-Schutz: Es werden höchstens ${io.github.eiji_der_sonnige.conversa.core.Messenger.MAX_PENDING_REQUESTS} offene " +
+            "Nachrichtenanfragen mit je ${io.github.eiji_der_sonnige.conversa.core.Messenger.MAX_REQUEST_MESSAGES} Nachrichten angenommen.",
+        style = MaterialTheme.typography.bodySmall
+    )
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text("Blockiert") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    if (blocked.isEmpty()) Text("Niemand blockiert.")
+                    blocked.sorted().forEach { pub ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(io.github.eiji_der_sonnige.conversa.crypto.Npub.short(pub), Modifier.weight(1f),
+                                fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+                            TextButton({ m.unblock(pub) }) { Text("Aufheben") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton({ open = false }) { Text("Schließen") } }
+        )
     }
 }
 

@@ -115,6 +115,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
     var menu by remember { mutableStateOf(false) }
     var rename by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var confirmBlock by remember { mutableStateOf(false) }
     var pendingCallVideo by remember { mutableStateOf<Boolean?>(null) }
     var videoToPlay by remember { mutableStateOf<ChatMessage?>(null) }
     var deleteMsg by remember { mutableStateOf<ChatMessage?>(null) }
@@ -229,6 +230,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                     DropdownMenu(menu, { menu = false }) {
                         DropdownMenuItem({ Text("Umbenennen") }, { menu = false; rename = true })
                         DropdownMenuItem({ Text("Kontakt & Chat löschen") }, { menu = false; confirmDelete = true })
+                        DropdownMenuItem({ Text("Blockieren") }, { menu = false; confirmBlock = true })
                     }
                 }
             )
@@ -243,6 +245,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button({ rename = true }) { Text("Annehmen") }
                             OutlinedButton({ m.removeContact(peer); vm.navigate(Screen.Chats) }) { Text("Ablehnen") }
+                            TextButton({ confirmBlock = true }) { Text("Blockieren") }
                         }
                     }
                 }
@@ -321,6 +324,20 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                 TextButton({ confirmDelete = false; m.removeContact(peer); vm.navigate(Screen.Chats) }) { Text("Löschen") }
             },
             dismissButton = { TextButton({ confirmDelete = false }) { Text("Abbrechen") } }
+        )
+    }
+    if (confirmBlock) {
+        AlertDialog(
+            onDismissRequest = { confirmBlock = false },
+            title = { Text("Blockieren?") },
+            text = {
+                Text("Der Chat wird entfernt. Weitere Nachrichten, Anrufe und Anfragen dieses Absenders werden ignoriert. " +
+                    "Er erfährt davon nichts. Aufheben kannst du das unter Einstellungen → Blockiert.")
+            },
+            confirmButton = {
+                TextButton({ confirmBlock = false; m.block(peer); vm.navigate(Screen.Chats) }) { Text("Blockieren") }
+            },
+            dismissButton = { TextButton({ confirmBlock = false }) { Text("Abbrechen") } }
         )
     }
     deleteMsg?.let { msg ->

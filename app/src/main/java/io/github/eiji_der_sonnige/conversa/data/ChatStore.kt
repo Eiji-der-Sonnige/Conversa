@@ -36,6 +36,10 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
     /** Vom Chatpartner „für alle“ gelöscht: gilt nur für seine eigenen Nachrichten, nie für unsere. */
     private val deletedByPeer = LinkedHashSet<String>()
 
+    /** Blockierte Absender: Von ihnen wird nichts mehr angenommen (auch keine neuen Nachrichtenanfragen). */
+    private val _blocked = MutableStateFlow<Set<String>>(emptySet())
+    val blocked: StateFlow<Set<String>> = _blocked
+
     private var saveJob: Job? = null
 
     init {
@@ -50,6 +54,7 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
             o.optJSONArray("deleted")?.strings()?.let { deleted.addAll(it) }
             o.optJSONArray("deletedByPeer")?.strings()?.let { deletedByPeer.addAll(it) }
         }
+        _blocked.value = o.optJSONArray("blocked")?.strings()?.toSet() ?: emptySet()
         // Ab Version 2 gibt es „ungelesen“. Ältere Verläufe gelten als gelesen, sonst wäre alles plötzlich neu.
         val legacy = o.optInt("v", 1) < 2
         _contacts.value = o.optJSONArray("contacts")?.objects()
@@ -68,6 +73,7 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
             .put("deleted", JSONArray().apply { synchronized(deleted) { deleted.forEach { put(it) } } })
             .put("deletedByPeer", JSONArray().apply { synchronized(deleted) { deletedByPeer.forEach { put(it) } } })
             .put("totp", totpSecret ?: "")
+            .put("blocked", JSONArray(_blocked.value.toList()))
             .put("contacts", JSONArray().apply { _contacts.value.values.forEach { put(it.toJson()) } })
             .put("messages", JSONArray().apply {
                 _messages.value.values.forEach { list -> list.forEach { put(it.toJson()) } }
@@ -99,6 +105,32 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
         _contacts.update { it + (c.pubHex to c) }
         scheduleSave()
     }
+
+    fun isBlocked(pub: String) = pub in _blocked.value
+
+    /** Blockiert einen Absender und entfernt seinen Chat. */
+    fun block(pub: String) {
+        _blocked.update { (it + pub).toList().takeLast(MAX_BLOCKED).toSet() }
+        removeContact(pub)
+    }
+
+    fun unblock(pub: String) {
+        _blocked.update { it - pub }
+        scheduleSave()
+    }
+
+    /** Übernimmt Sperren von einem anderen Gerät (Konto-Daten). */
+    fun mergeBlocked(pubs: Collection<String>) {
+        if (pubs.isEmpty()) return
+        _blocked.update { (it + pubs).toList().takeLast(MAX_BLOCKED).toSet() }
+        _contacts.value.keys.filter { it in pubs }.forEach { removeContact(it) }
+        scheduleSave()
+    }
+
+    /** Anzahl offener Nachrichtenanfragen (noch nicht angenommene Absender). */
+    fun pendingRequestCount(): Int = _contacts.value.values.count { !it.accepted }
+
+    fun messageCount(peer: String): Int = _messages.value[peer]?.size ?: 0
 
     fun removeContact(pub: String) {
         _contacts.update { it - pub }
@@ -198,5 +230,6 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
 
     companion object {
         private const val MAX_DELETED = 5000
+        private const val MAX_BLOCKED = 1000
     }
 }

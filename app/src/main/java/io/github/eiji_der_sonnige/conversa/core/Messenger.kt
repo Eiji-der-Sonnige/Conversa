@@ -26,6 +26,7 @@ import io.github.eiji_der_sonnige.conversa.data.MsgType
 import io.github.eiji_der_sonnige.conversa.data.mediaType
 import io.github.eiji_der_sonnige.conversa.media.VoiceRecorder
 import io.github.eiji_der_sonnige.conversa.data.objects
+import io.github.eiji_der_sonnige.conversa.data.strings
 import io.github.eiji_der_sonnige.conversa.media.MediaService
 import io.github.eiji_der_sonnige.conversa.nostr.Event
 import io.github.eiji_der_sonnige.conversa.nostr.GiftWrap
@@ -229,11 +230,19 @@ class Messenger(
         val r = u.rumor
         val fromMe = u.sender == identity.pubHex
         val peer = if (fromMe) r.tagValues("p").firstOrNull { it != identity.pubHex } ?: return else u.sender
-        if (!fromMe && peer !in store.contacts.value) {
+        if (store.isBlocked(peer)) return // auch eigene, synchronisierte Kopien (Chat bleibt weg)
+        val isMessage = r.kind == GiftWrap.KIND_CHAT || r.kind == GiftWrap.KIND_FILE
+        val known = store.contacts.value[peer]
+        if (!fromMe && known == null) {
             // Nur echte Nachrichten eines Unbekannten erzeugen eine Nachrichtenanfrage (Spam-Schutz: erst nach
             // Annahme normal sichtbar). Signale, Bestätigungen und Löschungen von Fremden werden verworfen.
-            if (r.kind != GiftWrap.KIND_CHAT && r.kind != GiftWrap.KIND_FILE) return
+            if (!isMessage) return
+            // Spam-Limit: Eine Flut neuer Absender darf den Speicher nicht füllen.
+            if (store.pendingRequestCount() >= MAX_PENDING_REQUESTS) return
             store.upsertContact(Contact(peer, "Unbekannt ${Npub.short(peer)}", accepted = false))
+        } else if (!fromMe && known?.accepted == false && isMessage &&
+            store.messageCount(peer) >= MAX_REQUEST_MESSAGES) {
+            return // Pro Nachrichtenanfrage nur die ersten Nachrichten, bis sie angenommen wird
         }
         when (r.kind) {
             GiftWrap.KIND_SIGNAL -> {
@@ -463,6 +472,17 @@ class Messenger(
         scheduleAccountPublish()
     }
 
+    /** Blockieren: Chat wird entfernt, weitere Nachrichten werden ignoriert. Bleibt nur verschlüsselt bei dir. */
+    fun block(pubHex: String) {
+        store.block(pubHex)
+        scheduleAccountPublish()
+    }
+
+    fun unblock(pubHex: String) {
+        store.unblock(pubHex)
+        scheduleAccountPublish()
+    }
+
     /**
      * Kontaktliste und 2FA-Geheimnis liegen verschlüsselt (NIP-44, nur für dich lesbar) als
      * ersetzbares Event (Kind 30078) auf den Relays – so funktioniert das Konto auf jedem Gerät.
@@ -499,6 +519,7 @@ class Messenger(
             val c = Contact.fromJson(o)
             if (store.contacts.value[c.pubHex]?.accepted != true) store.upsertContact(c)
         }
+        acc.optJSONArray("blocked")?.strings()?.filter { HEX64.matches(it) }?.let { store.mergeBlocked(it) }
         val totp = acc.optString("totp").takeIf { it.isNotEmpty() }
         store.setTotp(totp)
         _totpSecret.value = totp
@@ -522,6 +543,7 @@ class Messenger(
             .put("contacts", JSONArray().apply {
                 store.contacts.value.values.filter { it.accepted }.forEach { put(it.toJson()) }
             })
+            .put("blocked", JSONArray(store.blocked.value.toList()))
         val selfKey = Nip44.conversationKey(identity.privKey, identity.pubHex.hexToBytes())
         val ev = Event.sign(identity.privKey, 30078, listOf(listOf("d", accountTag)), Nip44.encrypt(acc.toString(), selfKey))
         relays.publish(ev)
@@ -538,6 +560,9 @@ class Messenger(
         const val MAX_MEDIA = 50L * 1024 * 1024
         private const val MAX_RUMOR_BYTES = 40_000
         private const val MAX_IDS_PER_EVENT = 100
+        /** Spam-Schutz: höchstens so viele offene Nachrichtenanfragen und Nachrichten je Anfrage. */
+        const val MAX_PENDING_REQUESTS = 30
+        const val MAX_REQUEST_MESSAGES = 20
         private val HEX64 = Regex("^[0-9a-f]{64}$")
         /** Herzschlag: im Vordergrund schnell (Anrufe), im Hintergrund selten (Akku, Funkmodul darf schlafen). */
         private const val HEARTBEAT_FG_MS = 30_000L
