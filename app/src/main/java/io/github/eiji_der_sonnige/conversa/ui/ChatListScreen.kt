@@ -289,7 +289,8 @@ fun CreateGroupDialog(
                     }
                 }
                 OutlinedTextField(extra, { extra = it }, label = { Text(stringResource(R.string.group_more_ids)) },
-                    minLines = 2, modifier = Modifier.fillMaxWidth())
+                    minLines = 2, modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = { ScanQrButton { scanned -> extra = (extra + "\n" + scanned.trim().removePrefix("nostr:")).trim() } })
                 Text(stringResource(R.string.group_create_hint), style = MaterialTheme.typography.bodySmall)
             }
         },
@@ -337,7 +338,8 @@ fun AddContactDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
         title = { Text(stringResource(R.string.add_contact)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(id, { id = it.trim() }, label = { Text(stringResource(R.string.contact_id_hint)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(id, { id = it.trim() }, label = { Text(stringResource(R.string.contact_id_hint)) }, modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = { ScanQrButton { scanned -> id = scanned.trim().removePrefix("nostr:") } })
                 OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name_local_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         },

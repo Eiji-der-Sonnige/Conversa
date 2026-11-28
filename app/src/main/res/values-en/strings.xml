@@ -240,6 +240,8 @@
     <string name="ringing">Ringing…</string>
     <string name="save">Save</string>
     <string name="save_network">Save network settings</string>
+    <string name="scan_qr">Scan QR code</string>
+    <string name="scan_qr_hint">Point the camera at the QR code of the contact ID (Settings → Your contact ID). The image is only analyzed on this device.</string>
     <string name="security">Security</string>
     <string name="send">Send</string>
     <string name="send_file">File</string>

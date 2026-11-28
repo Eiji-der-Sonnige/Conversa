@@ -240,7 +240,8 @@ fun GroupInfoScreen(vm: MainViewModel, m: Messenger, gid: String) {
                         }
                     }
                     OutlinedTextField(extra, { extra = it }, label = { Text(stringResource(R.string.group_more_ids)) },
-                        minLines = 2, modifier = Modifier.fillMaxWidth())
+                        minLines = 2, modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = { ScanQrButton { scanned -> extra = (extra + "\n" + scanned.trim().removePrefix("nostr:")).trim() } })
                     Text(stringResource(R.string.group_invite_hint), style = MaterialTheme.typography.bodySmall)
                 }
             },

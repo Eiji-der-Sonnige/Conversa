@@ -108,6 +108,10 @@ dependencies {
     implementation(libs.bouncycastle)
     implementation(libs.webrtc)
     implementation(libs.zxing.core)
+    // QR-Scanner (Kontakt-ID): Kamerabild wird nur lokal ausgewertet
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
     testImplementation(libs.junit)
     testImplementation("org.json:json:20240303")
     androidTestImplementation(platform(libs.androidx.compose.bom))

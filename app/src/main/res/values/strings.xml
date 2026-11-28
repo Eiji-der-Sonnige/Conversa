@@ -241,6 +241,8 @@
     <string name="ringing">Klingelt…</string>
     <string name="save">Speichern</string>
     <string name="save_network">Netzwerkeinstellungen speichern</string>
+    <string name="scan_qr">QR-Code scannen</string>
+    <string name="scan_qr_hint">Halte die Kamera auf den QR-Code der Kontakt-ID (Einstellungen → Deine Kontakt-ID). Das Bild wird nur auf diesem Gerät ausgewertet.</string>
     <string name="security">Sicherheit</string>
     <string name="send">Senden</string>
     <string name="send_file">Datei</string>
