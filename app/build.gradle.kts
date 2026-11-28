@@ -41,10 +41,14 @@ android {
     buildTypes {
         release {
             if (!keystoreProps.isEmpty) signingConfig = signingConfigs.getByName("release")
-            // R8-Optimierung bewusst aus: Die teilweise Optimierung (packageScope) machte
-            // Kotlin-Klassen für den restlichen Code unzugänglich -> IllegalAccessError beim Start (v1.2.0).
+            // R8 entfernt nur ungenutzten Bibliothekscode (Größe). Optimierung und Umbenennung bleiben aus
+            // (siehe proguard-rules.pro): Die teilweise Optimierung (packageScope) machte Kotlin-Klassen
+            // unzugänglich -> IllegalAccessError beim Start (v1.2.0).
             optimization {
-                enable = false
+                enable = true
+                keepRules {
+                    files.add(file("proguard-rules.pro"))
+                }
             }
         }
     }
@@ -55,9 +59,29 @@ android {
     buildFeatures {
         compose = true
     }
+    // Eine APK pro Prozessortyp: Die WebRTC-Bibliothek ist je Typ ~6–13 MB groß, ein Handy braucht nur eine.
+    // arm64-v8a = fast alle Handys, armeabi-v7a = sehr alte 32-Bit-Geräte, x86_64 = Android-Emulator auf dem
+    // PC und manche Chromebooks. 32-Bit-x86 (praktisch keine Geräte mehr) entfällt. Die Universal-APK enthält
+    // alle drei – für alle, die nicht wissen, welche sie brauchen.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
+        }
+    }
     packaging {
         resources {
-            excludes += setOf("META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/DEPENDENCIES")
+            excludes += setOf(
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/DEPENDENCIES",
+                // Tabellen eines Post-Quanten-Verfahrens aus Bouncy Castle, das Conversa nicht nutzt (~1,2 MB)
+                "org/bouncycastle/pqc/**",
+            )
+        }
+        jniLibs {
+            // 32-Bit-x86 auch aus der Universal-APK entfernen (siehe splits)
+            excludes += setOf("lib/x86/**")
         }
     }
 }
