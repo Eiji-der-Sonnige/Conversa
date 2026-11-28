@@ -30,3 +30,6 @@ mapping.txt
 /.idea/deploymentTargetSelector.xml
 /.idea/deviceManager.xml
 /.idea/studiobot.xml
+# Lokale Prüfberichte – niemals veröffentlichen
+LEGAL_CHECK.md
+SECURITY_REPORT.md
