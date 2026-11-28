@@ -252,6 +252,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun deleteChat(peer: String, alsoContact: Boolean) {
+        val m = _messenger.value ?: return
+        viewModelScope.launch {
+            try { m.deleteChat(peer, alsoContact) } catch (e: Exception) { _error.value = ctx.getString(R.string.err_delete, e.message ?: "") }
+        }
+    }
+
     fun showError(msg: String) {
         _error.value = msg
     }

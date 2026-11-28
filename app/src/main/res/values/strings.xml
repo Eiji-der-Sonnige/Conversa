@@ -37,6 +37,7 @@
     <string name="ch_calls">Eingehende Anrufe</string>
     <string name="ch_messages">Nachrichten</string>
     <string name="chat">Chat</string>
+    <string name="chat_options">Chat-Optionen</string>
     <string name="close">Schließen</string>
     <string name="code6">6-stelliger Code</string>
     <string name="computing_key">Schlüssel wird berechnet…</string>
@@ -50,6 +51,10 @@
     <string name="current_code">Aktueller Code</string>
     <string name="deactivate">Deaktivieren</string>
     <string name="delete">Löschen</string>
+    <string name="delete_chat">Chat löschen</string>
+    <string name="delete_chat_contact_too">Kontakt ebenfalls entfernen</string>
+    <string name="delete_chat_q">„%1$s“ löschen?</string>
+    <string name="delete_chat_text">Alle Nachrichten dieses Chats und zwischengespeicherte Bilder, Videos und Sprachnachrichten werden auf deinen Geräten endgültig entfernt und kommen auch bei einer neuen Anmeldung nicht zurück. Beim Gesprächspartner bleibt der Chat erhalten. Auf den Relays verbleiben nur verschlüsselte Kopien, die niemand außer euch beiden lesen kann.</string>
     <string name="delete_contact_chat">Kontakt &amp; Chat löschen</string>
     <string name="delete_contact_text">Kontakt und lokaler Verlauf werden entfernt.</string>
     <string name="delete_ellipsis">Löschen …</string>
@@ -169,6 +174,8 @@
     <string name="relays_hint">Nostr-Relays (eine wss://-URL pro Zeile)</string>
     <string name="relays_of">%1$d von %2$d verbunden</string>
     <string name="rename">Umbenennen</string>
+    <string name="rename_chat">Chat umbenennen</string>
+    <string name="rename_local_hint">Nur auf diesem Gerät sichtbar. Der Name wird nicht gesendet – weder an Relays noch an andere. Leer lassen für den ursprünglichen Namen.</string>
     <string name="request_from">Nachrichtenanfrage von %1$s</string>
     <string name="resend">Erneut senden</string>
     <string name="ringing">Klingelt…</string>

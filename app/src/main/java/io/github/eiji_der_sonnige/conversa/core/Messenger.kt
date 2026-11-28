@@ -473,6 +473,23 @@ class Messenger(
         scheduleAccountPublish()
     }
 
+    /**
+     * Chat löschen (Chatliste): Alle Nachrichten werden auf deinen Geräten entfernt und als gelöscht vermerkt,
+     * damit sie bei der nächsten Synchronisierung nicht zurückkommen. Zwischengespeicherte Medien (verschlüsselt
+     * und entschlüsselt) werden gelöscht, ebenso unversendete Kopien im Speicher. Eigene Schlüssel für 1:1-Chats
+     * gibt es nicht (sie werden bei Bedarf aus deinem Schlüssel berechnet). Auf den Relays bleiben die
+     * verschlüsselten Kopien liegen – lesbar nur mit deinem Schlüssel.
+     */
+    suspend fun deleteChat(peer: String, alsoContact: Boolean) {
+        val msgs = store.messages.value[peer].orEmpty()
+        deleteMessages(peer, msgs, forEveryone = false)
+        pendingAcks.entries.removeIf { it.value.first == peer }
+        Notifier.cancelMessage(ctx, peer)
+        if (alsoContact) removeContact(peer)
+    }
+
+    fun renameLocal(peer: String, name: String) = store.setAlias(peer, name)
+
     /** Blockieren: Chat wird entfernt, weitere Nachrichten werden ignoriert. Bleibt nur verschlüsselt bei dir. */
     fun block(pubHex: String) {
         store.block(pubHex)

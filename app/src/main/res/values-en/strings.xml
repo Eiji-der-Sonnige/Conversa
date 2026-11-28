@@ -36,6 +36,7 @@
     <string name="ch_calls">Incoming calls</string>
     <string name="ch_messages">Messages</string>
     <string name="chat">Chat</string>
+    <string name="chat_options">Chat options</string>
     <string name="close">Close</string>
     <string name="code6">6-digit code</string>
     <string name="computing_key">Computing key…</string>
@@ -49,6 +50,10 @@
     <string name="current_code">Current code</string>
     <string name="deactivate">Disable</string>
     <string name="delete">Delete</string>
+    <string name="delete_chat">Delete chat</string>
+    <string name="delete_chat_contact_too">Also remove contact</string>
+    <string name="delete_chat_q">Delete “%1$s”?</string>
+    <string name="delete_chat_text">All messages of this chat and cached images, videos and voice messages will be permanently removed from your devices and will not come back after logging in again. The other person keeps their copy of the chat. Only encrypted copies remain on the relays, which nobody but the two of you can read.</string>
     <string name="delete_contact_chat">Delete contact &amp; chat</string>
     <string name="delete_contact_text">The contact and the local history will be removed.</string>
     <string name="delete_ellipsis">Delete …</string>
@@ -168,6 +173,8 @@
     <string name="relays_hint">Nostr relays (one wss:// URL per line)</string>
     <string name="relays_of">%1$d of %2$d connected</string>
     <string name="rename">Rename</string>
+    <string name="rename_chat">Rename chat</string>
+    <string name="rename_local_hint">Only visible on this device. The name is not sent – neither to relays nor to anyone else. Leave empty for the original name.</string>
     <string name="request_from">Message request from %1$s</string>
     <string name="resend">Resend</string>
     <string name="ringing">Ringing…</string>

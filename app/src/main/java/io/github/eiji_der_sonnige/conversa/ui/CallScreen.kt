@@ -82,7 +82,8 @@ fun CallScreen(m: Messenger, state: CallState) {
         is CallState.Active -> state.peer to state.video
         CallState.Idle -> return
     }
-    val name = contacts[peer]?.name ?: Npub.short(peer)
+    val aliases by m.store.aliases.collectAsState()
+    val name = aliases[peer] ?: contacts[peer]?.name ?: Npub.short(peer)
     val status = when (state) {
         is CallState.Outgoing -> stringResource(R.string.ringing)
         is CallState.Incoming -> stringResource(if (video) R.string.incoming_video_call else R.string.incoming_call)

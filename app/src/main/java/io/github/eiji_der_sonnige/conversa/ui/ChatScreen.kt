@@ -112,6 +112,8 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
     val all by m.store.messages.collectAsState()
     val settings by vm.settings.collectAsState()
     val contact = contacts[peer]
+    val aliases by m.store.aliases.collectAsState()
+    val displayName = aliases[peer] ?: contact?.name
     val msgs = all[peer].orEmpty()
     var input by remember { mutableStateOf("") }
     var menu by remember { mutableStateOf(false) }
@@ -219,7 +221,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                 },
                 title = {
                     Column {
-                        Text(contact?.name ?: stringResource(R.string.chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(displayName ?: stringResource(R.string.chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(stringResource(R.string.e2e_encrypted), style = MaterialTheme.typography.labelSmall)
                     }
                 },
@@ -305,8 +307,10 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
         }
     }
 
-    if (rename) {
-        var name by remember { mutableStateOf(if (contact?.accepted == true) contact.name else "") }
+    if (rename && contact?.accepted == true) {
+        RenameDialog(displayName ?: "", onDismiss = { rename = false }) { m.renameLocal(peer, it); rename = false }
+    } else if (rename) {
+        var name by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { rename = false },
             title = { Text(if (contact?.accepted == true) stringResource(R.string.rename) else stringResource(R.string.accept_contact)) },

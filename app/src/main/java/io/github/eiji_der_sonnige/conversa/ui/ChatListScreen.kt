@@ -1,5 +1,11 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import io.github.eiji_der_sonnige.conversa.R
 import androidx.compose.ui.res.stringResource
 import android.Manifest
@@ -52,14 +58,19 @@ import io.github.eiji_der_sonnige.conversa.Screen
 import io.github.eiji_der_sonnige.conversa.core.Messenger
 import io.github.eiji_der_sonnige.conversa.data.MsgStatus
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatListScreen(vm: MainViewModel, m: Messenger) {
     val ctx = LocalContext.current
     val contacts by m.store.contacts.collectAsState()
     val messages by m.store.messages.collectAsState()
     val relayStatus by m.relays.status.collectAsState()
+    val aliases by m.store.aliases.collectAsState()
     var showAdd by remember { mutableStateOf(false) }
+    var menuFor by remember { mutableStateOf<String?>(null) }
+    var renameFor by remember { mutableStateOf<String?>(null) }
+    var deleteFor by remember { mutableStateOf<String?>(null) }
+    fun nameOf(pub: String) = aliases[pub] ?: contacts[pub]?.name ?: ""
 
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) {
@@ -104,10 +115,16 @@ fun ChatListScreen(vm: MainViewModel, m: Messenger) {
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(pad)) {
                 items(rows, key = { it.first.pubHex }) { (c, last) ->
+                    Box {
                     ListItem(
-                        modifier = Modifier.clickable { vm.navigate(Screen.Chat(c.pubHex)) },
-                        leadingContent = { Avatar(c.name) },
-                        headlineContent = { Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        // Langes Drücken öffnet das Chat-Menü (Löschen, Umbenennen).
+                        modifier = Modifier.combinedClickable(
+                            onClick = { vm.navigate(Screen.Chat(c.pubHex)) },
+                            onLongClick = { menuFor = c.pubHex },
+                            onLongClickLabel = stringResource(R.string.chat_options),
+                        ),
+                        leadingContent = { Avatar(nameOf(c.pubHex)) },
+                        headlineContent = { Text(nameOf(c.pubHex), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         supportingContent = {
                             Text(
                                 if (!c.accepted) stringResource(R.string.message_request) else last?.preview(ctx) ?: "",
@@ -123,10 +140,41 @@ fun ChatListScreen(vm: MainViewModel, m: Messenger) {
                             }
                         }
                     )
+                    DropdownMenu(menuFor == c.pubHex, { menuFor = null }) {
+                        DropdownMenuItem({ Text(stringResource(R.string.rename_chat)) }, { menuFor = null; renameFor = c.pubHex })
+                        DropdownMenuItem({ Text(stringResource(R.string.delete_chat)) }, { menuFor = null; deleteFor = c.pubHex })
+                    }
+                    }
                     HorizontalDivider()
                 }
             }
         }
+    }
+
+    renameFor?.let { pub ->
+        RenameDialog(nameOf(pub), onDismiss = { renameFor = null }) { m.renameLocal(pub, it); renameFor = null }
+    }
+    deleteFor?.let { pub ->
+        var alsoContact by remember(pub) { mutableStateOf(true) }
+        AlertDialog(
+            onDismissRequest = { deleteFor = null },
+            title = { Text(stringResource(R.string.delete_chat_q, nameOf(pub))) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.delete_chat_text))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(alsoContact, { alsoContact = it })
+                        Text(stringResource(R.string.delete_chat_contact_too))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton({ vm.deleteChat(pub, alsoContact); deleteFor = null }) {
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton({ deleteFor = null }) { Text(stringResource(R.string.cancel)) } }
+        )
     }
 
     if (showAdd) AddContactDialog(onDismiss = { showAdd = false }) { id, name ->
@@ -141,6 +189,24 @@ fun Avatar(name: String) {
             Text(name.firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleMedium)
         }
     }
+}
+
+/** Ändert nur den Anzeigenamen auf diesem Gerät – er wird nicht gesendet. */
+@Composable
+fun RenameDialog(current: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var name by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.rename_chat)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it.take(64) }, label = { Text(stringResource(R.string.name)) }, singleLine = true)
+                Text(stringResource(R.string.rename_local_hint), style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = { TextButton({ onSave(name.trim()) }) { Text(stringResource(R.string.save)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } }
+    )
 }
 
 @Composable
