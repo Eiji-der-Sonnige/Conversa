@@ -71,7 +71,8 @@ class Messenger(
 
     // Keine OkHttp-Pings: Den Herzschlag übernimmt RelayPool gebündelt und im Hintergrund seltener (Akku).
     private val http: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
+        // Ohne Tor gilt ein nicht erreichbares Relay nach 10 s als ausgefallen (schnellerer neuer Versuch).
+        .connectTimeout(if (settings.useTor) 20L else 10L, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)
         .writeTimeout(120, TimeUnit.SECONDS)
         .apply {
@@ -123,8 +124,10 @@ class Messenger(
     @Volatile var inForeground: Boolean = true
         set(value) {
             field = value
+            relays.foreground = value
             heartbeatKick.tryEmit(Unit) // Takt sofort anpassen bzw. Verbindung nach dem Aufwachen prüfen
             if (value) {
+                relays.reconnectNow() // fehlende Relays beim Öffnen der App sofort neu verbinden
                 Notifier.cancelCall(ctx)
                 activeChat?.let { Notifier.cancelMessage(ctx, it); markRead(it) }
             } else {

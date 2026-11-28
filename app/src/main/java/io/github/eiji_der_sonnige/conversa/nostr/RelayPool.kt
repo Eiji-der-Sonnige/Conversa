@@ -42,6 +42,11 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
     }
     @Volatile private var closed = false
 
+    /**
+     * App sichtbar? Dann wird ein ausgefallenes Relay schnell erneut versucht (1, 2, 4, 8, dann alle 10 s),
+     * im Hintergrund seltener (bis 60 s), damit das Funkmodul schlafen kann.
+     */
+    @Volatile var foreground = true
     /** Zeitpunkt der letzten Daten bzw. des letzten Herzschlags je Relay (elapsedRealtime, ms). */
     private val lastActivity = ConcurrentHashMap<String, Long>()
     private val lastPing = ConcurrentHashMap<String, Long>()
@@ -114,7 +119,7 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
         val n = (retries[url] ?: 0) + 1
         retries[url] = n
         scope.launch {
-            delay(minOf(60_000L, 2_000L * (1L shl minOf(n, 5))))
+            delay(retryDelayMs(n, foreground))
             if (!closed && !sockets.containsKey(url) && url in urls) open(url)
         }
     }
@@ -264,6 +269,12 @@ class RelayPool(private val scope: CoroutineScope, private val client: OkHttpCli
 
     companion object {
         private const val TAG = "RelayPool"
+
+        /** Wartezeit vor dem [attempt]-ten erneuten Versuch. */
+        fun retryDelayMs(attempt: Int, foreground: Boolean): Long {
+            val exp = 1_000L * (1L shl (attempt - 1).coerceIn(0, 6))
+            return minOf(exp, if (foreground) 10_000L else 60_000L)
+        }
         private const val PING_TIMEOUT_MS = 20_000L
         private val HEARTBEAT = JSONArray().put("REQ").put("hb")
             .put(JSONObject().put("ids", JSONArray().put("0".repeat(64))).put("limit", 1)).toString()
