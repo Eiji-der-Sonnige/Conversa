@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,58 +66,59 @@ fun LoginScreen(vm: MainViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Spacer(Modifier.height(24.dp))
-        Image(painterResource(R.drawable.conversa_logo), "Conversa-Logo", Modifier.size(120.dp))
+        Image(painterResource(R.drawable.conversa_logo), stringResource(R.string.logo), Modifier.size(120.dp))
         Text("Conversa", style = MaterialTheme.typography.headlineLarge)
         Text(
-            "Dezentral · Privat · Ende-zu-Ende-verschlüsselt",
+            stringResource(R.string.tagline),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             user, { user = it }, Modifier.fillMaxWidth(),
-            label = { Text("Benutzername") }, singleLine = true, enabled = !busy
+            label = { Text(stringResource(R.string.username)) }, singleLine = true, enabled = !busy
         )
         OutlinedTextField(
             pw, { pw = it }, Modifier.fillMaxWidth(),
-            label = { Text("Passwort") }, singleLine = true, enabled = !busy,
+            label = { Text(stringResource(R.string.password)) }, singleLine = true, enabled = !busy,
             visualTransformation = transform,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
                 IconButton({ show = !show }) {
-                    Icon(if (show) Icons.Default.VisibilityOff else Icons.Default.Visibility, "Anzeigen")
+                    Icon(if (show) Icons.Default.VisibilityOff else Icons.Default.Visibility, stringResource(R.string.show))
                 }
             }
         )
         if (newAccount) {
             OutlinedTextField(
                 pw2, { pw2 = it }, Modifier.fillMaxWidth(),
-                label = { Text("Passwort wiederholen") }, singleLine = true, enabled = !busy,
+                label = { Text(stringResource(R.string.password_repeat)) }, singleLine = true, enabled = !busy,
                 visualTransformation = transform,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
-            val problem = if (pw.isEmpty()) null else KeyDerivation.passwordProblem(pw.toCharArray())
+            val problem = if (pw.isEmpty()) null else KeyDerivation.passwordProblem(pw.toCharArray())?.let { stringResource(it) }
             Text(
-                problem ?: "✓ Passwort stark genug",
+                problem ?: stringResource(R.string.password_ok),
                 color = if (problem == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Neues Konto erstellen", Modifier.weight(1f))
+            Text(stringResource(R.string.new_account), Modifier.weight(1f))
             Switch(newAccount, { newAccount = it }, enabled = !busy)
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(accepted, { accepted = it }, enabled = !busy)
             Text(
-                "Ich akzeptiere die Nutzungsbedingungen, habe die Datenschutzhinweise gelesen und bin für " +
-                    "meine Nutzung und meine Inhalte selbst verantwortlich.",
+                stringResource(R.string.accept_terms),
                 style = MaterialTheme.typography.bodySmall
             )
         }
         Row {
-            TextButton({ legal = "Nutzungsbedingungen" to "legal/nutzungsbedingungen.txt" }) { Text("Nutzungsbedingungen") }
-            TextButton({ legal = "Datenschutzhinweise" to "legal/datenschutz.txt" }) { Text("Datenschutz") }
+            val termsTitle = stringResource(R.string.terms)
+            val privacyTitle = stringResource(R.string.privacy)
+            TextButton({ legal = termsTitle to "legal/nutzungsbedingungen.txt" }) { Text(termsTitle) }
+            TextButton({ legal = privacyTitle to "legal/datenschutz.txt" }) { Text(stringResource(R.string.privacy_short)) }
         }
         Button(
             onClick = {
@@ -128,17 +130,14 @@ fun LoginScreen(vm: MainViewModel) {
             if (busy) {
                 CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.size(12.dp))
-                Text("Schlüssel wird berechnet…")
+                Text(stringResource(R.string.computing_key))
             } else {
-                Text(if (newAccount) "Konto erstellen" else "Anmelden")
+                Text(stringResource(if (newAccount) R.string.create_account else R.string.login))
             }
         }
         Card(Modifier.fillMaxWidth()) {
             Text(
-                "Kein Server, keine E-Mail, keine Telefonnummer. Dein geheimer Schlüssel wird nur auf " +
-                    "diesem Gerät aus Benutzername + Passwort berechnet. Mit denselben Daten meldest du dich " +
-                    "auf jedem Gerät an.\n\n⚠ Das Passwort kann nicht zurückgesetzt werden. " +
-                    "Verlierst du es, ist das Konto verloren. Wähle ein langes, einzigartiges Passwort.",
+                stringResource(R.string.login_info),
                 Modifier.padding(16.dp),
                 style = MaterialTheme.typography.bodySmall
             )

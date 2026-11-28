@@ -1,0 +1,53 @@
+TERMS OF USE, LIABILITY AND WARRANTY NOTICE
+Version: 28.11.2026
+
+This is a convenience translation. In case of doubt, only the German version ("Nutzungsbedingungen") is legally binding.
+
+1. Subject
+Conversa is a private, non-commercial open-source hobby project. The app is provided free of charge as software for download (e.g. via GitHub Releases) and is a neutral technical tool for lawful communication.
+The developers do not operate any servers, any communication service or any platform. They have no access to users' accounts, keys, contacts, messages or files and can neither view, check, block nor delete content.
+
+2. License
+The source code of Conversa is licensed under the Apache License, Version 2.0. Included third-party components are subject to their own licenses (Settings → About → Open-source licenses). In case of conflict, the licenses take precedence over these terms.
+
+3. Permitted use
+The app may only be used in accordance with applicable law. In particular, the following is not permitted:
+- distributing illegal content (e.g. depictions of sexual abuse, content inciting hatred or terrorist content),
+- infringing copyrights, trademarks or personal rights,
+- insulting, threatening, stalking or harassing others,
+- spam, fraud and distributing malware,
+- any other use to prepare or commit criminal offences.
+
+4. Sole responsibility of the users
+Everyone who uses Conversa acts on their own responsibility and is solely responsible for
+- the content they send, receive and store,
+- the choice of relays, media servers and STUN/TURN servers used,
+- compliance with the laws that apply to them,
+- keeping their password secret and backing up their data.
+The developers are not responsible for actions, content or legal violations of users and do not adopt them as their own. To the extent permitted by law, users indemnify the developers against third-party claims based on that user's unlawful use of the app.
+A lost password cannot be recovered; the associated accounts and data are then permanently inaccessible.
+
+5. Third-party servers
+The preset Nostr relays, Blossom media servers and STUN servers are operated by independent third parties, not by the developers. They are merely replaceable defaults. The developers have no influence on their availability, storage period, content or data processing. The terms and privacy policies of the respective operators apply.
+
+6. Security and anonymity – no guarantee
+Conversa is designed for anonymity and end-to-end encryption. However, complete anonymity or absolute security is not guaranteed. In particular:
+- For technical reasons, external servers see connection data such as the IP address.
+- In calls without a TURN server, the other person sees your IP address.
+- Text messages have no forward secrecy: if the password becomes known, older messages stored on relays can be decrypted.
+- Two-factor authentication is only enforced within the app. It does not protect against people who know the username and password.
+- The software has not undergone an independent security audit and has so far been checked mainly by automated tests.
+Use is at your own risk. For particularly sensitive communication, audited solutions should be used in addition.
+
+7. No emergency calls
+Conversa does not replace emergency services. Emergency calls (e.g. 112) are not possible via the app.
+
+8. No warranty, no availability commitment
+The app is provided free of charge and "as is". There is no claim to freedom from errors, any particular function, availability, compatibility, support, updates or further development. Messages may be lost or delivered late. As the app is provided free of charge, the developers are liable for defects of quality or title only if they fraudulently concealed a defect (sections 523, 524 German Civil Code, BGB).
+
+9. Liability
+As the app is provided free of charge, the developers are only liable for intent and gross negligence (section 521 BGB). Liability for injury to life, body or health, liability for fraudulently concealed defects and liability under mandatory statutory provisions, where applicable, remain unaffected.
+To the extent permitted by law, the developers are not liable for damage caused by third-party servers, by unlawful or abusive use by other persons or by the loss of the password.
+
+10. Final provisions
+German law applies. Mandatory consumer protection provisions of the country in which users have their habitual residence remain unaffected. Should individual provisions be invalid, the validity of the remaining provisions remains unaffected.

@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa.crypto
 
+import io.github.eiji_der_sonnige.conversa.R
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator
 import org.bouncycastle.crypto.params.Argon2Parameters
 
@@ -34,14 +35,14 @@ object KeyDerivation {
         return Identity(key, user)
     }
 
-    /** Liefert eine Fehlermeldung oder null, wenn das Passwort stark genug ist. */
-    fun passwordProblem(pw: CharArray): String? {
-        if (pw.size < 12) return "Mindestens 12 Zeichen"
+    /** Liefert die Ressourcen-ID einer Fehlermeldung oder null, wenn das Passwort stark genug ist. */
+    fun passwordProblem(pw: CharArray): Int? {
+        if (pw.size < 12) return R.string.pw_min_length
         val classes = listOf(
             pw.any { it.isLowerCase() }, pw.any { it.isUpperCase() },
             pw.any { it.isDigit() }, pw.any { !it.isLetterOrDigit() }
         ).count { it }
-        if (classes < 3) return "Mindestens 3 von: Kleinbuchstaben, Großbuchstaben, Ziffern, Sonderzeichen"
+        if (classes < 3) return R.string.pw_classes
         return null
     }
 }

@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import androidx.compose.ui.res.stringResource
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
@@ -76,9 +77,9 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("Einstellungen") },
+            title = { Text(stringResource(R.string.settings)) },
             navigationIcon = {
-                IconButton({ vm.navigate(Screen.Chats) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
+                IconButton({ vm.navigate(Screen.Chats) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
             }
         )
     }) { pad ->
@@ -86,42 +87,41 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
             Modifier.fillMaxSize().padding(pad).imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Section("Deine Kontakt-ID") {
-                Text("Teile diese ID, damit andere dich hinzufügen können. Sie verrät nichts über dich.",
+            Section(stringResource(R.string.your_id)) {
+                Text(stringResource(R.string.your_id_text),
                     style = MaterialTheme.typography.bodySmall)
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     QrCode(m.identity.npub)
                 }
                 Text(m.identity.npub, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
-                OutlinedButton({ copyToClipboard(ctx, "Conversa-ID", m.identity.npub) }) { Text("ID kopieren") }
+                OutlinedButton({ copyToClipboard(ctx, "Conversa-ID", m.identity.npub) }) { Text(stringResource(R.string.copy_id)) }
             }
 
-            Section("Zwei-Faktor-Authentifizierung") {
+            Section(stringResource(R.string.twofa)) {
                 Text(
-                    if (totp != null) "✓ Aktiv – Code wird bei Login und App-Start abgefragt."
-                    else "Nicht aktiv. Schützt dein Konto zusätzlich mit Google Authenticator."
+                    if (totp != null) stringResource(R.string.twofa_on)
+                    else stringResource(R.string.twofa_off)
                 )
-                if (totp == null) Button({ vm.startTotpSetup() }) { Text("2FA aktivieren") }
-                else OutlinedButton({ disable2fa = true }) { Text("2FA deaktivieren") }
+                if (totp == null) Button({ vm.startTotpSetup() }) { Text(stringResource(R.string.twofa_enable)) }
+                else OutlinedButton({ disable2fa = true }) { Text(stringResource(R.string.twofa_disable)) }
             }
 
-            Section("Privatsphäre & Empfang") {
-                SwitchRow("Lesebestätigungen senden (✓✓)", current.readReceipts) {
+            Section(stringResource(R.string.privacy_receiving)) {
+                SwitchRow(stringResource(R.string.read_receipts), current.readReceipts) {
                     vm.saveLocalSettings(readReceipts = it, background = current.background)
                 }
                 Text(
-                    "Wie bei anderen Messengern gegenseitig: Ist es aus, siehst du auch nicht, ob andere deine " +
-                        "Nachrichten gelesen haben. An Nachrichtenanfragen werden nie Bestätigungen gesendet.",
+                    stringResource(R.string.read_receipts_text),
                     style = MaterialTheme.typography.bodySmall
                 )
                 HorizontalDivider()
-                SwitchRow("Im Hintergrund verbunden bleiben", current.background) {
+                SwitchRow(stringResource(R.string.background), current.background) {
                     if (it) explainBackground = true
                     else vm.saveLocalSettings(readReceipts = current.readReceipts, background = false)
                 }
                 Text(
-                    if (current.background) "Aktiv: Nachrichten und Anrufe kommen auch bei geschlossener App an. Kostet etwas Akku."
-                    else "Aus: Nachrichten kommen an, solange die App geöffnet ist oder kurz im Hintergrund läuft.",
+                    if (current.background) stringResource(R.string.background_on)
+                    else stringResource(R.string.background_off),
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (current.background) BatteryOptimizationRow()
@@ -129,25 +129,25 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
                 BlockedRow(m)
             }
 
-            Section("Netzwerk (dezentral)") {
+            Section(stringResource(R.string.network)) {
                 OutlinedTextField(relays, { relays = it }, Modifier.fillMaxWidth(),
-                    label = { Text("Nostr-Relays (eine wss://-URL pro Zeile)") }, minLines = 3)
+                    label = { Text(stringResource(R.string.relays_hint)) }, minLines = 3)
                 OutlinedTextField(blossom, { blossom = it }, Modifier.fillMaxWidth(),
-                    label = { Text("Medien-Server (Blossom, https://)") }, minLines = 2)
-                SwitchRow("Über Tor verbinden (Orbot muss laufen, SOCKS 9050)", tor) { tor = it }
+                    label = { Text(stringResource(R.string.blossom_hint)) }, minLines = 2)
+                SwitchRow(stringResource(R.string.use_tor), tor) { tor = it }
             }
 
-            Section("Anrufe") {
-                Text("Anrufe laufen direkt P2P. Ohne TURN-Server sieht der Gesprächspartner deine IP-Adresse.",
+            Section(stringResource(R.string.calls)) {
+                Text(stringResource(R.string.calls_text),
                     style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(turnUrl, { turnUrl = it.trim() }, Modifier.fillMaxWidth(),
-                    label = { Text("TURN-Server (turn:host:3478)") }, singleLine = true)
+                    label = { Text(stringResource(R.string.turn_server)) }, singleLine = true)
                 OutlinedTextField(turnUser, { turnUser = it }, Modifier.fillMaxWidth(),
-                    label = { Text("TURN-Benutzer") }, singleLine = true)
+                    label = { Text(stringResource(R.string.turn_user)) }, singleLine = true)
                 OutlinedTextField(turnPass, { turnPass = it }, Modifier.fillMaxWidth(),
-                    label = { Text("TURN-Passwort") }, singleLine = true,
+                    label = { Text(stringResource(R.string.turn_pass)) }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation())
-                SwitchRow("Nur über TURN (IP-Adresse verbergen)", relayOnly) { relayOnly = it }
+                SwitchRow(stringResource(R.string.relay_only), relayOnly) { relayOnly = it }
             }
 
             Button(
@@ -162,7 +162,7 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
                     )
                 },
                 Modifier.fillMaxWidth()
-            ) { Text("Netzwerkeinstellungen speichern") }
+            ) { Text(stringResource(R.string.save_network)) }
 
             InfoSection(m)
 
@@ -170,37 +170,33 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
             Button(
                 { confirmLogout = true }, Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) { Text("Abmelden & lokale Daten löschen") }
+            ) { Text(stringResource(R.string.logout_wipe)) }
         }
     }
 
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
-            title = { Text("Abmelden?") },
-            text = { Text("Alle lokalen Daten werden sicher gelöscht. Chats und Kontakte lassen sich mit Benutzername + Passwort aus dem Netzwerk wiederherstellen, solange die Relays sie speichern.") },
-            confirmButton = { TextButton({ confirmLogout = false; vm.logout() }) { Text("Abmelden") } },
-            dismissButton = { TextButton({ confirmLogout = false }) { Text("Abbrechen") } }
+            title = { Text(stringResource(R.string.logout_q)) },
+            text = { Text(stringResource(R.string.logout_text)) },
+            confirmButton = { TextButton({ confirmLogout = false; vm.logout() }) { Text(stringResource(R.string.logout)) } },
+            dismissButton = { TextButton({ confirmLogout = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     if (explainBackground) {
         AlertDialog(
             onDismissRequest = { explainBackground = false },
-            title = { Text("Im Hintergrund empfangen?") },
+            title = { Text(stringResource(R.string.background_q)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Conversa bleibt dann dauerhaft mit den Relays verbunden. Nachrichten und Anrufe kommen sofort an – " +
-                            "auch wenn die App geschlossen ist oder das Handy im Standby liegt. Es wird kein Google-Dienst benutzt."
+                        stringResource(R.string.background_text1)
                     )
                     Text(
-                        "🔋 Akku: Das kostet zusätzlich Strom, grob geschätzt etwa 1–5 % pro Tag. Wie viel genau, hängt vom " +
-                            "Handy, vom Netz (WLAN ist sparsamer als Mobilfunk) und von der Anzahl der Nachrichten ab. Grund: " +
-                            "Das Handy prüft alle paar Minuten kurz, ob die Verbindung noch steht."
+                        stringResource(R.string.background_text2)
                     )
                     Text(
-                        "Android zeigt dafür einen dauerhaften Hinweis in der Benachrichtigungsleiste. Du kannst ihn in den " +
-                            "Systemeinstellungen ausblenden. Mit Tor muss auch Orbot im Hintergrund laufen.",
+                        stringResource(R.string.background_text3),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -209,21 +205,21 @@ fun SettingsScreen(vm: MainViewModel, m: Messenger) {
                 TextButton({
                     explainBackground = false
                     vm.saveLocalSettings(readReceipts = current.readReceipts, background = true)
-                }) { Text("Einschalten") }
+                }) { Text(stringResource(R.string.turn_on)) }
             },
-            dismissButton = { TextButton({ explainBackground = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton({ explainBackground = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     if (disable2fa) {
         var code by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { disable2fa = false },
-            title = { Text("2FA deaktivieren") },
+            title = { Text(stringResource(R.string.twofa_disable)) },
             text = {
-                OutlinedTextField(code, { code = it.filter(Char::isDigit).take(6) }, label = { Text("Aktueller Code") }, singleLine = true)
+                OutlinedTextField(code, { code = it.filter(Char::isDigit).take(6) }, label = { Text(stringResource(R.string.current_code)) }, singleLine = true)
             },
-            confirmButton = { TextButton({ if (vm.disableTotp(code)) disable2fa = false }) { Text("Deaktivieren") } },
-            dismissButton = { TextButton({ disable2fa = false }) { Text("Abbrechen") } }
+            confirmButton = { TextButton({ if (vm.disableTotp(code)) disable2fa = false }) { Text(stringResource(R.string.deactivate)) } },
+            dismissButton = { TextButton({ disable2fa = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
@@ -235,77 +231,75 @@ private fun InfoSection(m: Messenger) {
     val pkg = remember {
         ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.PackageInfoFlags.of(0))
     }
-    val dateFmt = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMANY) }
+    val dateFmt = remember { java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT) }
     var showLicenses by remember { mutableStateOf(false) }
     var asset by remember { mutableStateOf<Pair<String, String>?>(null) }
 
-    Section("Info") {
+    Section(stringResource(R.string.info)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(painterResource(R.drawable.conversa_logo), "Conversa-Logo", Modifier.size(64.dp))
+            Image(painterResource(R.drawable.conversa_logo), stringResource(R.string.logo), Modifier.size(64.dp))
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("Conversa", style = MaterialTheme.typography.titleLarge)
-                Text("Version ${pkg.versionName} (Build ${pkg.longVersionCode})",
+                Text(stringResource(R.string.version_build, pkg.versionName ?: "", pkg.longVersionCode),
                     style = MaterialTheme.typography.bodyMedium)
             }
         }
-        InfoRow("Gerät", "${Build.MANUFACTURER} ${Build.MODEL}")
+        InfoRow(stringResource(R.string.device), "${Build.MANUFACTURER} ${Build.MODEL}")
         InfoRow("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-        InfoRow("Unterstützt", "ab Android 13 (API 33)")
-        InfoRow("Installiert", dateFmt.format(Date(pkg.firstInstallTime)))
-        InfoRow("Aktualisiert", dateFmt.format(Date(pkg.lastUpdateTime)))
-        InfoRow("Paket", ctx.packageName)
-        InfoRow("Lizenz", "Open Source, Apache 2.0")
-        InfoRow("Projekt", "Nicht-kommerzielles Hobbyprojekt")
-        InfoRow("Relays", "${relayStatus.count { it.value }} von ${relayStatus.size} verbunden")
-        InfoRow("Netzwerk", "Nostr (dezentral)" + if (m.settings.useTor) " über Tor" else "")
+        InfoRow(stringResource(R.string.supported), stringResource(R.string.supported_value))
+        InfoRow(stringResource(R.string.installed), dateFmt.format(Date(pkg.firstInstallTime)))
+        InfoRow(stringResource(R.string.updated), dateFmt.format(Date(pkg.lastUpdateTime)))
+        InfoRow(stringResource(R.string.package_label), ctx.packageName)
+        InfoRow(stringResource(R.string.license), "Open Source, Apache 2.0")
+        InfoRow(stringResource(R.string.project), stringResource(R.string.project_value))
+        InfoRow("Relays", stringResource(R.string.relays_of, relayStatus.count { it.value }, relayStatus.size))
+        InfoRow(stringResource(R.string.network_label), stringResource(if (m.settings.useTor) R.string.network_value_tor else R.string.network_value))
         HorizontalDivider()
-        Text("Sicherheit", style = MaterialTheme.typography.titleSmall)
-        InfoRow("Nachrichten", "NIP-44 v2 (ChaCha20, HMAC-SHA256)")
-        InfoRow("Metadatenschutz", "Gift Wrap (NIP-17 / NIP-59)")
-        InfoRow("Signaturen", "secp256k1 Schnorr (BIP-340)")
-        InfoRow("Schlüsselableitung", "Argon2id, 64 MB")
-        InfoRow("Medien", "AES-256-GCM")
-        InfoRow("Anrufe", "WebRTC P2P, DTLS-SRTP")
-        InfoRow("Lokale Daten", "Android Keystore, AES-256-GCM")
+        Text(stringResource(R.string.security), style = MaterialTheme.typography.titleSmall)
+        InfoRow(stringResource(R.string.messages), "NIP-44 v2 (ChaCha20, HMAC-SHA256)")
+        InfoRow(stringResource(R.string.metadata_protection), "Gift Wrap (NIP-17 / NIP-59)")
+        InfoRow(stringResource(R.string.signatures), "secp256k1 Schnorr (BIP-340)")
+        InfoRow(stringResource(R.string.key_derivation), "Argon2id, 64 MB")
+        InfoRow(stringResource(R.string.media), "AES-256-GCM")
+        InfoRow(stringResource(R.string.calls), "WebRTC P2P, DTLS-SRTP")
+        InfoRow(stringResource(R.string.local_data), "Android Keystore, AES-256-GCM")
         Text(
-            "Auf Anonymität und Ende-zu-Ende-Verschlüsselung ausgelegt – ohne Werbung, Tracking oder " +
-                "eigenen Server. Relays, Medien- und STUN-Server sind austauschbare Voreinstellungen und werden " +
-                "von unabhängigen Dritten betrieben; diese sehen technisch bedingt z. B. die IP-Adresse. " +
-                "Kein unabhängiges Sicherheits-Audit, keine Gewährleistung – Nutzung auf eigenes Risiko. " +
-                "Jede Person ist für ihre Nutzung und Inhalte selbst verantwortlich.",
+            stringResource(R.string.about_disclaimer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         HorizontalDivider()
-        Text("Rechtliches", style = MaterialTheme.typography.titleSmall)
-        TextButton({ asset = "Nutzungsbedingungen" to "legal/nutzungsbedingungen.txt" }) { Text("Nutzungsbedingungen & Haftung") }
-        TextButton({ asset = "Datenschutzhinweise" to "legal/datenschutz.txt" }) { Text("Datenschutzhinweise") }
-        TextButton({ showLicenses = true }) { Text("Open-Source-Lizenzen") }
+        Text(stringResource(R.string.legal), style = MaterialTheme.typography.titleSmall)
+        val termsTitle = stringResource(R.string.terms)
+        val privacyTitle = stringResource(R.string.privacy)
+        TextButton({ asset = termsTitle to "legal/nutzungsbedingungen.txt" }) { Text(stringResource(R.string.terms_liability)) }
+        TextButton({ asset = privacyTitle to "legal/datenschutz.txt" }) { Text(privacyTitle) }
+        TextButton({ showLicenses = true }) { Text(stringResource(R.string.oss_licenses)) }
     }
 
     if (showLicenses) {
         AlertDialog(
             onDismissRequest = { showLicenses = false },
-            title = { Text("Open-Source-Lizenzen") },
+            title = { Text(stringResource(R.string.oss_licenses)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        "Conversa nutzt Open-Source-Software. Tippe auf einen Eintrag, um den vollständigen Text zu lesen.",
+                        stringResource(R.string.oss_text),
                         style = MaterialTheme.typography.bodySmall
                     )
                     listOf(
-                        "Übersicht & Copyright-Hinweise" to "licenses/NOTICES.txt",
-                        "Apache License 2.0 (AndroidX, Kotlin, OkHttp, Okio, ZXing, Stream WebRTC u. a.)" to "licenses/apache-2.0.txt",
-                        "MIT-Lizenz (Bouncy Castle)" to "licenses/bouncycastle-mit.txt",
+                        stringResource(R.string.lic_notices) to "licenses/NOTICES.txt",
+                        stringResource(R.string.lic_apache) to "licenses/apache-2.0.txt",
+                        stringResource(R.string.lic_mit) to "licenses/bouncycastle-mit.txt",
                         "BSD 3-Clause (WebRTC)" to "licenses/webrtc-bsd-3-clause.txt",
-                        "In WebRTC enthaltene Komponenten (BoringSSL, Opus, libvpx, AV1 u. a.)" to "licenses/webrtc-third-party.txt",
+                        stringResource(R.string.lic_webrtc_third) to "licenses/webrtc-third-party.txt",
                     ).forEach { (name, path) ->
                         TextButton({ asset = name to path }) { Text(name) }
                     }
                 }
             },
-            confirmButton = { TextButton({ showLicenses = false }) { Text("Schließen") } }
+            confirmButton = { TextButton({ showLicenses = false }) { Text(stringResource(R.string.close)) } }
         )
     }
     asset?.let { (title, path) -> AssetTextDialog(title, path) { asset = null } }
@@ -324,11 +318,10 @@ private fun BatteryOptimizationRow() {
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { exempt = pm.isIgnoringBatteryOptimizations(ctx.packageName) }
     if (exempt) {
-        Text("✓ Von der Akku-Optimierung ausgenommen.", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.battery_exempt), style = MaterialTheme.typography.bodySmall)
     } else {
         Text(
-            "Tipp: Manche Handys (z. B. Xiaomi, Huawei, Samsung) beenden Apps im Hintergrund trotzdem. " +
-                "Dann hilft es, Conversa von der Akku-Optimierung auszunehmen.",
+            stringResource(R.string.battery_tip),
             style = MaterialTheme.typography.bodySmall
         )
         OutlinedButton({
@@ -340,7 +333,7 @@ private fun BatteryOptimizationRow() {
             } catch (e: Exception) {
                 launcher.launch(android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             }
-        }) { Text("Akku-Optimierung ausschalten") }
+        }) { Text(stringResource(R.string.battery_off)) }
     }
 }
 
@@ -350,31 +343,31 @@ private fun BlockedRow(m: Messenger) {
     val blocked by m.store.blocked.collectAsState()
     var open by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("Blockiert: ${blocked.size}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        if (blocked.isNotEmpty()) TextButton({ open = true }) { Text("Verwalten") }
+        Text(stringResource(R.string.blocked_count, blocked.size), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        if (blocked.isNotEmpty()) TextButton({ open = true }) { Text(stringResource(R.string.manage)) }
     }
     Text(
-        "Spam-Schutz: Es werden höchstens ${io.github.eiji_der_sonnige.conversa.core.Messenger.MAX_PENDING_REQUESTS} offene " +
-            "Nachrichtenanfragen mit je ${io.github.eiji_der_sonnige.conversa.core.Messenger.MAX_REQUEST_MESSAGES} Nachrichten angenommen.",
+        stringResource(R.string.spam_limit_text, io.github.eiji_der_sonnige.conversa.core.Messenger.MAX_PENDING_REQUESTS,
+            io.github.eiji_der_sonnige.conversa.core.Messenger.MAX_REQUEST_MESSAGES),
         style = MaterialTheme.typography.bodySmall
     )
     if (open) {
         AlertDialog(
             onDismissRequest = { open = false },
-            title = { Text("Blockiert") },
+            title = { Text(stringResource(R.string.blocked)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    if (blocked.isEmpty()) Text("Niemand blockiert.")
+                    if (blocked.isEmpty()) Text(stringResource(R.string.nobody_blocked))
                     blocked.sorted().forEach { pub ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(io.github.eiji_der_sonnige.conversa.crypto.Npub.short(pub), Modifier.weight(1f),
                                 fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
-                            TextButton({ m.unblock(pub) }) { Text("Aufheben") }
+                            TextButton({ m.unblock(pub) }) { Text(stringResource(R.string.unblock)) }
                         }
                     }
                 }
             },
-            confirmButton = { TextButton({ open = false }) { Text("Schließen") } }
+            confirmButton = { TextButton({ open = false }) { Text(stringResource(R.string.close)) } }
         )
     }
 }

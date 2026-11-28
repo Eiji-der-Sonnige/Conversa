@@ -1,0 +1,64 @@
+PRIVACY NOTICE
+Version: 28.11.2026
+
+This is a convenience translation. In case of doubt, only the German version ("Datenschutzhinweise") is legally binding.
+
+1. Principle
+Conversa is a non-commercial open-source hobby project. The developers do not operate any servers and receive no user data at all – neither account data nor messages, contacts, media, IP addresses or usage statistics. They do not collect, store or process any personal data through the app.
+The app contains no advertising, no tracking, no analytics or crash reporting services and no Google Play services/Firebase.
+This notice explains what the app does on the device and which data it transmits to third-party servers on behalf of the users.
+
+2. Processing on the device
+The following data is stored only locally on the device and encrypted with a key from the Android Keystore (AES-256-GCM):
+- the private key derived from username and password, and the username,
+- contacts (public keys and names you chose yourself),
+- messages including delivery status, the IDs of deleted messages and the media cache,
+- the two-factor authentication secret (if enabled),
+- network settings.
+Your own voice recordings are stored unencrypted in the app's private storage only until they are sent or discarded and are deleted afterwards. The password itself is not stored. All local data is deleted when you log out or uninstall the app. No backups are created.
+
+3. Transmission to third-party servers
+For decentralized communication, the app connects to servers operated by independent third parties. The list is preset and can be changed in the settings. The operators of these servers are responsible for the data processing on them; their privacy policies apply. The servers may be operated outside the European Union. For technical reasons, the following is transmitted:
+
+a) Nostr relays (preset: relay.damus.io, nos.lol, relay.primal.net, nostr.mom, relay.snort.social)
+- IP address and connection times,
+- your own public key (pseudonymous identifier) for subscriptions,
+- end-to-end encrypted message envelopes ("gift wraps") that contain the recipient's public key, but not the sender, the content or the exact time,
+- an encrypted account event (contacts, blocked senders, 2FA setting) that can only be read with your own key but can be linked to your public key,
+- also encrypted: deletion notices and read receipts (see d).
+- With background receiving enabled, the connection is permanent; the relays can therefore see when the device is online.
+
+b) Blossom media servers (preset: nostr.download, blossom.yakihonne.com, files.sovbit.host)
+- IP address and time,
+- encrypted files, their checksum (SHA-256) and size. Uploads are signed with a one-time key and are not linked to the Nostr account.
+- Received images and videos are loaded from the address the sender specifies in the message. That server receives your IP address. For message requests from unknown senders, this only happens after you explicitly tap.
+
+c) STUN servers for calls (stun.l.google.com – Google LLC; stun.cloudflare.com – Cloudflare, Inc.)
+- IP address and port to determine the public network address.
+
+d) Chat partners
+- Read receipts (can be turned off in the settings) tell the other person that and when a message was read. No read receipts are sent to unknown senders (message requests).
+- "Delete for everyone" sends the other person a request to remove a message. Whether their device complies is outside the app's control; they may already have seen or saved the message.
+- In direct peer-to-peer calls, the other person receives your IP address. This can be avoided with a TURN server you enter yourself and the option "TURN only"; the TURN operator then receives the IP address.
+
+e) Tor (optional)
+- With the Tor option enabled, connections to relays and media servers are routed through the locally installed app Orbot; the servers then see the IP address of a Tor exit node instead of yours. Calls do not run over Tor.
+
+4. Permissions
+- Internet/network state: connection to the servers named above.
+- Camera and microphone: for calls and voice messages, requested only when needed.
+- Notifications: local notices about new messages and incoming calls, without content or sender.
+- Foreground service, start after boot, briefly keeping the device awake: only for the optional background receiving. No additional data is collected.
+The Android photo picker is used to select images and videos; no access to the entire storage is needed.
+
+5. Two-factor authentication
+When enabled, a secret is generated and added to an authenticator app (e.g. Google Authenticator). The respective provider is responsible for its data processing.
+
+6. Download via GitHub
+When you download the app from GitHub, GitHub, Inc. processes data according to its own privacy policy. The developers do not receive any personal data of the users.
+
+7. Your rights
+Local data can be deleted at any time by logging out or uninstalling. Requests regarding data on third-party servers (e.g. deletion) must be addressed to their operators. Your right to lodge a complaint with a data protection supervisory authority remains unaffected.
+
+8. Contact
+Questions and comments can be submitted via the project's GitHub repository (issues). Please do not publish personal or confidential data there.

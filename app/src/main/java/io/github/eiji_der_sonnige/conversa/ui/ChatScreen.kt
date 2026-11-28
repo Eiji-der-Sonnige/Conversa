@@ -1,5 +1,7 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import io.github.eiji_der_sonnige.conversa.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
@@ -129,12 +131,12 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
     fun stopAndSend() {
         val res = recorder.stop()
         recording = false
-        if (res == null) vm.showError("Aufnahme zu kurz") else vm.sendVoice(peer, res.first, res.second)
+        if (res == null) vm.showError(ctx.getString(R.string.rec_too_short)) else vm.sendVoice(peer, res.first, res.second)
     }
 
     fun startRecording() {
         if (m.calls.state.value != CallState.Idle) {
-            vm.showError("Während eines Anrufs nicht möglich")
+            vm.showError(ctx.getString(R.string.not_during_call))
             return
         }
         player.release()
@@ -143,7 +145,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
             recorder.start(onMaxReached = { stopAndSend() })
             recording = true
         } catch (e: Exception) {
-            vm.showError("Mikrofon nicht verfügbar")
+            vm.showError(ctx.getString(R.string.mic_unavailable))
         }
     }
 
@@ -186,7 +188,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
         if (uri != null) vm.sendMedia(peer, uri)
     }
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok) startRecording() else vm.showError("Für Sprachnachrichten wird das Mikrofon benötigt")
+        if (ok) startRecording() else vm.showError(ctx.getString(R.string.mic_needed))
     }
     val callPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
         val video = pendingCallVideo ?: return@rememberLauncherForActivityResult
@@ -213,24 +215,24 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    IconButton({ vm.navigate(Screen.Chats) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
+                    IconButton({ vm.navigate(Screen.Chats) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 title = {
                     Column {
-                        Text(contact?.name ?: "Chat", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("🔒 Ende-zu-Ende-verschlüsselt", style = MaterialTheme.typography.labelSmall)
+                        Text(contact?.name ?: stringResource(R.string.chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.e2e_encrypted), style = MaterialTheme.typography.labelSmall)
                     }
                 },
                 actions = {
                     if (contact?.accepted == true) {
-                        IconButton({ call(false) }) { Icon(Icons.Default.Call, "Sprachanruf") }
-                        IconButton({ call(true) }) { Icon(Icons.Default.Videocam, "Videoanruf") }
+                        IconButton({ call(false) }) { Icon(Icons.Default.Call, stringResource(R.string.voice_call)) }
+                        IconButton({ call(true) }) { Icon(Icons.Default.Videocam, stringResource(R.string.video_call)) }
                     }
-                    IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, "Menü") }
+                    IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.menu)) }
                     DropdownMenu(menu, { menu = false }) {
-                        DropdownMenuItem({ Text("Umbenennen") }, { menu = false; rename = true })
-                        DropdownMenuItem({ Text("Kontakt & Chat löschen") }, { menu = false; confirmDelete = true })
-                        DropdownMenuItem({ Text("Blockieren") }, { menu = false; confirmBlock = true })
+                        DropdownMenuItem({ Text(stringResource(R.string.rename)) }, { menu = false; rename = true })
+                        DropdownMenuItem({ Text(stringResource(R.string.delete_contact_chat)) }, { menu = false; confirmDelete = true })
+                        DropdownMenuItem({ Text(stringResource(R.string.block)) }, { menu = false; confirmBlock = true })
                     }
                 }
             )
@@ -240,12 +242,12 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
             if (contact != null && !contact.accepted) {
                 Card(Modifier.fillMaxWidth().padding(8.dp)) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Nachrichtenanfrage von ${Npub.short(peer)}")
-                        Text("Anrufe sind erst nach dem Annehmen möglich.", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.request_from, Npub.short(peer)))
+                        Text(stringResource(R.string.calls_after_accept), style = MaterialTheme.typography.bodySmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button({ rename = true }) { Text("Annehmen") }
-                            OutlinedButton({ m.removeContact(peer); vm.navigate(Screen.Chats) }) { Text("Ablehnen") }
-                            TextButton({ confirmBlock = true }) { Text("Blockieren") }
+                            Button({ rename = true }) { Text(stringResource(R.string.accept)) }
+                            OutlinedButton({ m.removeContact(peer); vm.navigate(Screen.Chats) }) { Text(stringResource(R.string.reject)) }
+                            TextButton({ confirmBlock = true }) { Text(stringResource(R.string.block)) }
                         }
                     }
                 }
@@ -262,7 +264,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                         showRead = settings.readReceipts,
                         onRetry = { vm.resend(msg) },
                         onPlay = { videoToPlay = msg },
-                        onCopy = { copyToClipboard(ctx, "Nachricht", msg.text) },
+                        onCopy = { copyToClipboard(ctx, ctx.getString(R.string.message_hint), msg.text) },
                         onDelete = { deleteMsg = msg },
                         onError = { vm.showError(it) },
                     )
@@ -274,29 +276,29 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
             ) {
                 if (recording) {
                     IconButton({ recorder.cancel(); recording = false }) {
-                        Icon(Icons.Default.Delete, "Aufnahme verwerfen", tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Default.Delete, stringResource(R.string.discard_recording), tint = MaterialTheme.colorScheme.error)
                     }
                     Icon(Icons.Default.FiberManualRecord, null, Modifier.size(14.dp), tint = Color(0xFFE53935))
                     Text(
-                        "  Aufnahme ${formatDuration(recordMs)}  (max. ${VoiceRecorder.MAX_DURATION_MS / 60_000} Min.)",
+                        stringResource(R.string.recording_status, formatDuration(recordMs), VoiceRecorder.MAX_DURATION_MS / 60_000),
                         Modifier.weight(1f)
                     )
-                    IconButton({ stopAndSend() }) { Icon(Icons.AutoMirrored.Filled.Send, "Sprachnachricht senden") }
+                    IconButton({ stopAndSend() }) { Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.send_voice)) }
                 } else {
                     IconButton({
                         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-                    }) { Icon(Icons.Default.AttachFile, "Bild/Video senden") }
+                    }) { Icon(Icons.Default.AttachFile, stringResource(R.string.send_media)) }
                     OutlinedTextField(
                         input, { input = it }, Modifier.weight(1f).heightIn(max = 140.dp),
-                        placeholder = { Text("Nachricht") }, shape = RoundedCornerShape(24.dp)
+                        placeholder = { Text(stringResource(R.string.message_hint)) }, shape = RoundedCornerShape(24.dp)
                     )
                     if (input.isBlank()) {
-                        IconButton({ mic() }) { Icon(Icons.Default.Mic, "Sprachnachricht aufnehmen") }
+                        IconButton({ mic() }) { Icon(Icons.Default.Mic, stringResource(R.string.record_voice)) }
                     } else {
                         IconButton({
                             vm.sendText(peer, input)
                             input = ""
-                        }) { Icon(Icons.AutoMirrored.Filled.Send, "Senden") }
+                        }) { Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.send)) }
                     }
                 }
             }
@@ -307,64 +309,62 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
         var name by remember { mutableStateOf(if (contact?.accepted == true) contact.name else "") }
         AlertDialog(
             onDismissRequest = { rename = false },
-            title = { Text(if (contact?.accepted == true) "Umbenennen" else "Kontakt annehmen") },
-            text = { OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true) },
+            title = { Text(if (contact?.accepted == true) stringResource(R.string.rename) else stringResource(R.string.accept_contact)) },
+            text = { OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name)) }, singleLine = true) },
             confirmButton = {
-                TextButton({ m.acceptContact(peer, name.trim()); rename = false }) { Text("Speichern") }
+                TextButton({ m.acceptContact(peer, name.trim()); rename = false }) { Text(stringResource(R.string.save)) }
             },
-            dismissButton = { TextButton({ rename = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton({ rename = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Löschen?") },
-            text = { Text("Kontakt und lokaler Verlauf werden entfernt.") },
+            title = { Text(stringResource(R.string.delete_q)) },
+            text = { Text(stringResource(R.string.delete_contact_text)) },
             confirmButton = {
-                TextButton({ confirmDelete = false; m.removeContact(peer); vm.navigate(Screen.Chats) }) { Text("Löschen") }
+                TextButton({ confirmDelete = false; m.removeContact(peer); vm.navigate(Screen.Chats) }) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { TextButton({ confirmDelete = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton({ confirmDelete = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     if (confirmBlock) {
         AlertDialog(
             onDismissRequest = { confirmBlock = false },
-            title = { Text("Blockieren?") },
+            title = { Text(stringResource(R.string.block_q)) },
             text = {
-                Text("Der Chat wird entfernt. Weitere Nachrichten, Anrufe und Anfragen dieses Absenders werden ignoriert. " +
-                    "Er erfährt davon nichts. Aufheben kannst du das unter Einstellungen → Blockiert.")
+                Text(stringResource(R.string.block_text))
             },
             confirmButton = {
-                TextButton({ confirmBlock = false; m.block(peer); vm.navigate(Screen.Chats) }) { Text("Blockieren") }
+                TextButton({ confirmBlock = false; m.block(peer); vm.navigate(Screen.Chats) }) { Text(stringResource(R.string.block)) }
             },
-            dismissButton = { TextButton({ confirmBlock = false }) { Text("Abbrechen") } }
+            dismissButton = { TextButton({ confirmBlock = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     deleteMsg?.let { msg ->
         val canEveryone = msg.fromMe && msg.status.rank >= MsgStatus.SENT.rank
         AlertDialog(
             onDismissRequest = { deleteMsg = null },
-            title = { Text("Nachricht löschen?") },
+            title = { Text(stringResource(R.string.delete_msg_q)) },
             text = {
                 Text(
-                    if (canEveryone) "„Für alle löschen“ entfernt die Nachricht auch beim Empfänger (ab Conversa 1.3). " +
-                        "Hat er sie schon gesehen, kann er sie trotzdem kopiert oder fotografiert haben."
-                    else "Die Nachricht wird auf deinen Geräten entfernt. Beim Gesprächspartner bleibt sie erhalten."
+                    if (canEveryone) stringResource(R.string.delete_everyone_text)
+                    else stringResource(R.string.delete_me_text)
                 )
             },
             confirmButton = {
                 Row {
                     if (canEveryone) {
                         TextButton({ vm.deleteMessages(peer, listOf(msg), forEveryone = true); deleteMsg = null }) {
-                            Text("Für alle löschen")
+                            Text(stringResource(R.string.delete_for_everyone))
                         }
                     }
                     TextButton({ vm.deleteMessages(peer, listOf(msg), forEveryone = false); deleteMsg = null }) {
-                        Text("Für mich löschen")
+                        Text(stringResource(R.string.delete_for_me))
                     }
                 }
             },
-            dismissButton = { TextButton({ deleteMsg = null }) { Text("Abbrechen") } }
+            dismissButton = { TextButton({ deleteMsg = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     videoToPlay?.let { VideoDialog(m, it) { videoToPlay = null } }
@@ -392,7 +392,7 @@ private fun MessageBubble(
                 color = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.widthIn(max = 300.dp)
-                    .combinedClickable(onClick = {}, onLongClick = { actions = true }, onLongClickLabel = "Optionen")
+                    .combinedClickable(onClick = {}, onLongClick = { actions = true }, onLongClickLabel = stringResource(R.string.options))
             ) {
                 Column(Modifier.padding(10.dp)) {
                     when {
@@ -404,9 +404,9 @@ private fun MessageBubble(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(Icons.Default.PlayCircle, null, Modifier.size(40.dp))
-                            Text("  Video abspielen")
+                            Text(stringResource(R.string.play_video))
                         }
-                        else -> Text("📎 Datei (${msg.media.mime})")
+                        else -> Text(stringResource(R.string.file_type, msg.media.mime))
                     }
                     Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                         Text(formatTime(msg.createdAt), style = MaterialTheme.typography.labelSmall)
@@ -419,9 +419,9 @@ private fun MessageBubble(
             }
             DropdownMenu(actions, { actions = false }) {
                 if (msg.type == MsgType.TEXT && msg.media == null) {
-                    DropdownMenuItem({ Text("Text kopieren") }, { actions = false; onCopy() })
+                    DropdownMenuItem({ Text(stringResource(R.string.copy_text)) }, { actions = false; onCopy() })
                 }
-                DropdownMenuItem({ Text("Löschen …") }, { actions = false; onDelete() })
+                DropdownMenuItem({ Text(stringResource(R.string.delete_ellipsis)) }, { actions = false; onDelete() })
             }
         }
     }
@@ -433,13 +433,13 @@ private fun StatusIcon(status: MsgStatus, showRead: Boolean, onRetry: () -> Unit
     val small = Modifier.size(16.dp)
     val tint = MaterialTheme.colorScheme.onSurfaceVariant
     when (status) {
-        MsgStatus.SENDING -> Icon(Icons.Default.Schedule, "Wird gesendet", small, tint = tint)
-        MsgStatus.SENT, MsgStatus.RECEIVED -> Icon(Icons.Default.Done, "Übermittelt", small, tint = tint)
+        MsgStatus.SENDING -> Icon(Icons.Default.Schedule, stringResource(R.string.status_sending), small, tint = tint)
+        MsgStatus.SENT, MsgStatus.RECEIVED -> Icon(Icons.Default.Done, stringResource(R.string.status_sent), small, tint = tint)
         MsgStatus.READ ->
-            if (showRead) Icon(Icons.Default.DoneAll, "Gelesen", small, tint = Color(0xFF2196F3))
-            else Icon(Icons.Default.Done, "Übermittelt", small, tint = tint)
+            if (showRead) Icon(Icons.Default.DoneAll, stringResource(R.string.status_read), small, tint = Color(0xFF2196F3))
+            else Icon(Icons.Default.Done, stringResource(R.string.status_sent), small, tint = tint)
         MsgStatus.FAILED -> IconButton(onRetry, Modifier.size(24.dp)) {
-            Icon(Icons.Default.ErrorOutline, "Erneut senden", tint = MaterialTheme.colorScheme.error)
+            Icon(Icons.Default.ErrorOutline, stringResource(R.string.resend), tint = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -454,7 +454,7 @@ private fun EncryptedImage(m: Messenger, msg: ChatMessage, trusted: Boolean) {
     // und schon der Abruf würde dem dortigen Server die eigene IP-Adresse verraten.
     var allowed by remember(media.sha256) { mutableStateOf(trusted) }
     if (!allowed) {
-        TextButton({ allowed = true }) { Text("🖼 Bild von unbekanntem Absender laden") }
+        TextButton({ allowed = true }) { Text(stringResource(R.string.load_image_unknown)) }
         return
     }
     LaunchedEffect(media.sha256) {
@@ -476,17 +476,17 @@ private fun EncryptedImage(m: Messenger, msg: ChatMessage, trusted: Boolean) {
     val b = bmp
     when {
         b != null -> Image(
-            b, "Bild",
+            b, stringResource(R.string.image),
             Modifier.widthIn(max = 260.dp).heightIn(max = 320.dp).clickable { fullscreen = true },
             contentScale = ContentScale.Fit
         )
-        failed -> Text("⚠ Bild nicht verfügbar")
+        failed -> Text(stringResource(R.string.image_unavailable))
         else -> CircularProgressIndicator(Modifier.size(32.dp).padding(4.dp))
     }
     if (fullscreen && b != null) {
         Dialog({ fullscreen = false }, DialogProperties(usePlatformDefaultWidth = false)) {
             Box(Modifier.fillMaxSize().background(Color.Black).clickable { fullscreen = false }, contentAlignment = Alignment.Center) {
-                Image(b, "Bild", Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                Image(b, stringResource(R.string.image), Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             }
         }
     }
@@ -517,7 +517,7 @@ private fun VideoDialog(m: Messenger, msg: ChatMessage, onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     onRelease = { it.stopPlayback() }
                 )
-                failed -> Text("⚠ Video nicht verfügbar", color = Color.White)
+                failed -> Text(stringResource(R.string.video_unavailable), color = Color.White)
                 else -> CircularProgressIndicator()
             }
         }

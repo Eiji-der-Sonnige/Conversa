@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa
 
+import io.github.eiji_der_sonnige.conversa.R
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
@@ -83,13 +84,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (_busy.value) return
         val user = KeyDerivation.normalizeUsername(username)
         if (user.length < 3) {
-            _error.value = "Benutzername: mindestens 3 Zeichen"
+            _error.value = ctx.getString(R.string.err_username)
             return
         }
         if (newAccount) {
-            KeyDerivation.passwordProblem(password)?.let { _error.value = it; return }
+            KeyDerivation.passwordProblem(password)?.let { _error.value = ctx.getString(it); return }
             if (confirm == null || !password.contentEquals(confirm)) {
-                _error.value = "Passwörter stimmen nicht überein"
+                _error.value = ctx.getString(R.string.err_pw_mismatch)
                 return
             }
         }
@@ -111,7 +112,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 // Halb angemeldeten Zustand nicht weiterlaufen lassen (keine Sitzung gespeichert).
                 withContext(Dispatchers.IO) { Session.stop() }
-                _error.value = "Anmeldung fehlgeschlagen: ${e.message}"
+                _error.value = ctx.getString(R.string.err_login, e.message ?: "")
             } finally {
                 _busy.value = false
             }
@@ -130,7 +131,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val st = _screen.value as? Screen.TotpVerify ?: return
         val now = System.currentTimeMillis()
         if (now < totpLockedUntil) {
-            _error.value = "Zu viele Fehlversuche. Bitte ${(totpLockedUntil - now) / 1000 + 1} s warten."
+            _error.value = ctx.getString(R.string.err_too_many, ((totpLockedUntil - now) / 1000 + 1).toInt())
             return
         }
         if (checkTotp(st.secret, code)) {
@@ -142,7 +143,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             failedTotp++
             if (failedTotp >= 5) totpLockedUntil = now + 30_000L * (1L shl minOf(failedTotp - 5, 6))
-            _error.value = "Falscher Code" + clockHint()
+            _error.value = ctx.getString(R.string.err_wrong_code) + clockHint()
         }
     }
 
@@ -164,8 +165,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val nt = io.github.eiji_der_sonnige.conversa.core.NetworkTime
         val off = nt.offsetMillis / 1000
         return when {
-            !nt.hasSamples -> " – noch keine Netzwerkzeit verfügbar, bitte kurz warten und erneut versuchen"
-            kotlin.math.abs(off) >= 30 -> " – deine Geräteuhr weicht um $off s ab (wird ausgeglichen)"
+            !nt.hasSamples -> ctx.getString(R.string.hint_no_net_time)
+            kotlin.math.abs(off) >= 30 -> ctx.getString(R.string.hint_clock_off, off.toInt())
             else -> ""
         }
     }
@@ -178,7 +179,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun confirmTotpSetup(secret: String, code: String) {
         if (!checkTotp(secret, code)) {
-            _error.value = "Code ungültig" + clockHint()
+            _error.value = ctx.getString(R.string.err_invalid_code) + clockHint()
             return
         }
         _messenger.value?.setTotp(secret)
@@ -189,7 +190,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val m = _messenger.value ?: return false
         val secret = m.totpSecret.value ?: return true
         if (!checkTotp(secret, code)) {
-            _error.value = "Falscher Code" + clockHint()
+            _error.value = ctx.getString(R.string.err_wrong_code) + clockHint()
             return false
         }
         m.setTotp(null)
@@ -207,11 +208,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val pub = Npub.parse(input)
         val m = _messenger.value ?: return false
         if (pub == null) {
-            _error.value = "Ungültige Kontakt-ID (npub1… erwartet)"
+            _error.value = ctx.getString(R.string.err_invalid_id)
             return false
         }
         if (pub == m.identity.pubHex) {
-            _error.value = "Das ist deine eigene ID"
+            _error.value = ctx.getString(R.string.err_own_id)
             return false
         }
         m.addContact(pub, name.trim())
@@ -228,7 +229,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun sendMedia(peer: String, uri: Uri) {
         val m = _messenger.value ?: return
         viewModelScope.launch {
-            try { m.sendMedia(peer, uri) } catch (e: Exception) { _error.value = "Senden fehlgeschlagen: ${e.message}" }
+            try { m.sendMedia(peer, uri) } catch (e: Exception) { _error.value = ctx.getString(R.string.err_send, e.message ?: "") }
         }
     }
 
@@ -240,14 +241,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun sendVoice(peer: String, file: java.io.File, durationMs: Long) {
         val m = _messenger.value ?: return
         viewModelScope.launch {
-            try { m.sendVoice(peer, file, durationMs) } catch (e: Exception) { _error.value = "Sprachnachricht fehlgeschlagen: ${e.message}" }
+            try { m.sendVoice(peer, file, durationMs) } catch (e: Exception) { _error.value = ctx.getString(R.string.err_voice, e.message ?: "") }
         }
     }
 
     fun deleteMessages(peer: String, msgs: List<ChatMessage>, forEveryone: Boolean) {
         val m = _messenger.value ?: return
         viewModelScope.launch {
-            try { m.deleteMessages(peer, msgs, forEveryone) } catch (e: Exception) { _error.value = "Löschen fehlgeschlagen: ${e.message}" }
+            try { m.deleteMessages(peer, msgs, forEveryone) } catch (e: Exception) { _error.value = ctx.getString(R.string.err_delete, e.message ?: "") }
         }
     }
 

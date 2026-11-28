@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa.media
 
+import io.github.eiji_der_sonnige.conversa.R
 import android.content.Context
 import io.github.eiji_der_sonnige.conversa.crypto.Secp256k1
 import io.github.eiji_der_sonnige.conversa.crypto.hexToBytes
@@ -77,7 +78,7 @@ class MediaService(
                     }
                     val json = try { JSONObject(resp.body?.string().orEmpty()) } catch (e: Exception) { JSONObject() }
                     // Manche Server liefern kein "url"-Feld; nach Blossom-Standard ist die Datei dann unter /<sha256> abrufbar.
-                    if (json.has("sha256") && json.optString("sha256") != hash) throw IOException("Prüfsumme abweichend")
+                    if (json.has("sha256") && json.optString("sha256") != hash) throw IOException(ctx.getString(R.string.err_checksum))
                     val url = json.optString("url").ifEmpty { "$base/$hash" }
                     require(url.startsWith("https://")) { "Unsichere URL" }
                     return@withContext url
@@ -86,7 +87,7 @@ class MediaService(
                 errors += "${base.removePrefix("https://")}: ${e.message}"
             }
         }
-        throw IOException(if (errors.isEmpty()) "Kein Medien-Server konfiguriert" else errors.joinToString("; "))
+        throw IOException(if (errors.isEmpty()) ctx.getString(R.string.err_no_media_server) else errors.joinToString("; "))
     }
 
     /** Lädt höchstens [MAX_DOWNLOAD] Bytes – schützt vor Speicherüberlauf durch manipulierte Links. */
@@ -126,7 +127,7 @@ class MediaService(
                     break
                 }
             }
-            (data ?: throw IOException("Datei nicht verfügbar oder manipuliert")).also { cached.writeBytes(it) }
+            (data ?: throw IOException(ctx.getString(R.string.err_file_unavailable))).also { cached.writeBytes(it) }
         }
         decrypt(enc, media.keyHex.hexToBytes(), media.nonceHex.hexToBytes())
     }

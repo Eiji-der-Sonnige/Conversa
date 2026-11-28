@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa.core
 
+import io.github.eiji_der_sonnige.conversa.R
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -239,7 +240,7 @@ class Messenger(
             if (!isMessage) return
             // Spam-Limit: Eine Flut neuer Absender darf den Speicher nicht füllen.
             if (store.pendingRequestCount() >= MAX_PENDING_REQUESTS) return
-            store.upsertContact(Contact(peer, "Unbekannt ${Npub.short(peer)}", accepted = false))
+            store.upsertContact(Contact(peer, ctx.getString(R.string.unknown_sender, Npub.short(peer)), accepted = false))
         } else if (!fromMe && known?.accepted == false && isMessage &&
             store.messageCount(peer) >= MAX_REQUEST_MESSAGES) {
             return // Pro Nachrichtenanfrage nur die ersten Nachrichten, bis sie angenommen wird
@@ -350,7 +351,7 @@ class Messenger(
         val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_CHAT, listOf(listOf("p", peer)), clean)
         // NIP-44 verschlüsselt höchstens 64 KiB; Rumor wird zweifach verpackt (Seal + Gift Wrap).
         if (rumor.toJson().toString().toByteArray(Charsets.UTF_8).size > MAX_RUMOR_BYTES) {
-            throw IOException("Nachricht zu lang – bitte aufteilen")
+            throw IOException(ctx.getString(R.string.err_too_long))
         }
         store.upsertMessage(ChatMessage(rumor.id, peer, true, MsgType.TEXT, clean, null, rumor.createdAt, MsgStatus.SENDING))
         publishRumor(rumor, peer, rumor.id)
@@ -377,9 +378,9 @@ class Messenger(
         val size = cr.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
             if (c.moveToFirst()) c.getLong(0) else -1L
         } ?: -1L
-        if (size > MAX_MEDIA) throw IOException("Datei zu groß (max. ${MAX_MEDIA / 1024 / 1024} MB)")
+        if (size > MAX_MEDIA) throw IOException(ctx.getString(R.string.err_file_too_big, (MAX_MEDIA / 1024 / 1024).toInt()))
         uploadAndSend(peer, mime, 0L) {
-            cr.openInputStream(uri)?.use { it.readBytes() } ?: throw IOException("Datei nicht lesbar")
+            cr.openInputStream(uri)?.use { it.readBytes() } ?: throw IOException(ctx.getString(R.string.err_file_unreadable))
         }
     }
 
@@ -394,11 +395,11 @@ class Messenger(
 
     private suspend fun uploadAndSend(peer: String, mime: String, durationMs: Long, read: () -> ByteArray) {
         val placeholderId = "local-" + randomBytes(8).toHex()
-        store.upsertMessage(ChatMessage(placeholderId, peer, true, mediaType(mime), "Wird verschlüsselt & hochgeladen…",
+        store.upsertMessage(ChatMessage(placeholderId, peer, true, mediaType(mime), ctx.getString(R.string.uploading),
             null, Event.now(), MsgStatus.SENDING))
         try {
             val bytes = read()
-            if (bytes.size > MAX_MEDIA) throw IOException("Datei zu groß")
+            if (bytes.size > MAX_MEDIA) throw IOException(ctx.getString(R.string.err_file_too_big, (MAX_MEDIA / 1024 / 1024).toInt()))
             val enc = media.encrypt(bytes)
             val url = media.upload(enc.data)
             val m = Media(url, mime, enc.key.toHex(), enc.nonce.toHex(), sha256(enc.data).toHex(), bytes.size.toLong(), durationMs)
@@ -500,7 +501,7 @@ class Messenger(
             .put("#d", JSONArray().put(accountTag))
         val res = relays.queryWithEose(listOf(filter), timeoutMs = 12_000)
         if (res.eoseCount == 0) {
-            throw IOException("Keine Antwort von den Relays. Bitte Internetverbindung (bzw. Orbot) prüfen und erneut versuchen.")
+            throw IOException(ctx.getString(R.string.err_no_relay_answer))
         }
         val latest = res.events.filter { it.pubkey == identity.pubHex }.maxByOrNull { it.createdAt }
             ?: return null
@@ -508,7 +509,7 @@ class Messenger(
             val selfKey = Nip44.conversationKey(identity.privKey, identity.pubHex.hexToBytes())
             JSONObject(Nip44.decrypt(latest.content, selfKey))
         } catch (e: Exception) {
-            throw IOException("Konto-Daten konnten nicht gelesen werden")
+            throw IOException(ctx.getString(R.string.err_account_data))
         }
     }
 

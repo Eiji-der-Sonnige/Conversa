@@ -1,5 +1,7 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import io.github.eiji_der_sonnige.conversa.R
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,7 +43,7 @@ private fun CodeField(code: String, onChange: (String) -> Unit) {
     OutlinedTextField(
         code, { v -> onChange(v.filter(Char::isDigit).take(6)) },
         Modifier.fillMaxWidth(),
-        label = { Text("6-stelliger Code") },
+        label = { Text(stringResource(R.string.code6)) },
         singleLine = true,
         textStyle = MaterialTheme.typography.headlineSmall.copy(fontFamily = FontFamily.Monospace),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
@@ -57,14 +59,14 @@ fun TotpVerifyScreen(vm: MainViewModel, s: Screen.TotpVerify) {
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
     ) {
         Icon(Icons.Default.Security, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
-        Text("Zwei-Faktor-Authentifizierung", style = MaterialTheme.typography.titleLarge)
-        Text("Gib den Code aus Google Authenticator ein.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.twofa), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.enter_code), color = MaterialTheme.colorScheme.onSurfaceVariant)
         CodeField(code) {
             code = it
             if (it.length == 6) vm.verifyTotp(it)
         }
-        Button({ vm.verifyTotp(code) }, Modifier.fillMaxWidth(), enabled = code.length == 6) { Text("Bestätigen") }
-        TextButton({ vm.logout() }) { Text(if (s.newSession) "Abbrechen" else "Abmelden") }
+        Button({ vm.verifyTotp(code) }, Modifier.fillMaxWidth(), enabled = code.length == 6) { Text(stringResource(R.string.confirm)) }
+        TextButton({ vm.logout() }) { Text(stringResource(if (s.newSession) R.string.cancel else R.string.logout)) }
     }
 }
 
@@ -79,29 +81,29 @@ fun TotpSetupScreen(vm: MainViewModel, m: Messenger, secret: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("2FA einrichten", style = MaterialTheme.typography.titleLarge)
-        Text("1. Öffne Google Authenticator → „+“ → „QR-Code scannen“.")
+        Text(stringResource(R.string.twofa_setup), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.twofa_step1))
         QrCode(uri)
-        Text("Oder Schlüssel manuell eingeben:", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.twofa_manual), style = MaterialTheme.typography.bodySmall)
         Text(
             secret.chunked(4).joinToString(" "),
             fontFamily = FontFamily.Monospace,
             style = MaterialTheme.typography.bodyLarge
         )
-        TextButton({ copyToClipboard(ctx, "2FA", secret, sensitive = true) }) { Text("Schlüssel kopieren") }
+        TextButton({ copyToClipboard(ctx, "2FA", secret, sensitive = true) }) { Text(stringResource(R.string.copy_key)) }
         // Authenticator auf demselben Gerät: otpauth-Link direkt öffnen.
         TextButton({
             try {
                 ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri)))
             } catch (_: Exception) {
-                android.widget.Toast.makeText(ctx, "Keine Authenticator-App gefunden", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(ctx, ctx.getString(R.string.no_authenticator), android.widget.Toast.LENGTH_SHORT).show()
             }
-        }) { Text("In Authenticator-App öffnen") }
-        Text("2. Gib den angezeigten Code ein, um die Einrichtung abzuschließen.")
+        }) { Text(stringResource(R.string.open_authenticator)) }
+        Text(stringResource(R.string.twofa_step2))
         CodeField(code) { code = it }
         Button({ vm.confirmTotpSetup(secret, code) }, Modifier.fillMaxWidth(), enabled = code.length == 6) {
-            Text("2FA aktivieren")
+            Text(stringResource(R.string.twofa_enable))
         }
-        TextButton({ vm.navigate(Screen.Settings) }) { Text("Abbrechen") }
+        TextButton({ vm.navigate(Screen.Settings) }) { Text(stringResource(R.string.cancel)) }
     }
 }

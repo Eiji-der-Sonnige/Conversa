@@ -1,5 +1,7 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import io.github.eiji_der_sonnige.conversa.R
+import androidx.compose.ui.res.stringResource
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Column
@@ -125,22 +127,23 @@ fun VoiceMessage(player: VoicePlayer, msg: ChatMessage, trusted: Boolean, onErro
     // Wie bei Bildern: Bei Nachrichtenanfragen erst nach Tippen laden (sonst IP-Leck an den Server des Absenders).
     var allowed by remember(media.sha256) { mutableStateOf(trusted) }
     if (!allowed) {
-        TextButton({ allowed = true }) { Text("🎤 Sprachnachricht von unbekanntem Absender laden") }
+        TextButton({ allowed = true }) { Text(stringResource(R.string.load_voice_unknown)) }
         return
     }
     val active = player.playingId == msg.id
+    val unavailable = stringResource(R.string.voice_unavailable)
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (player.loadingId == msg.id) {
             CircularProgressIndicator(Modifier.size(40.dp).padding(8.dp))
         } else {
             IconButton({
                 scope.launch {
-                    try { player.toggle(msg) } catch (e: Exception) { onError("Sprachnachricht nicht verfügbar") }
+                    try { player.toggle(msg) } catch (e: Exception) { onError(unavailable) }
                 }
             }) {
                 Icon(
                     if (active && !player.paused) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    if (active && !player.paused) "Pause" else "Abspielen"
+                    if (active && !player.paused) stringResource(R.string.pause) else stringResource(R.string.play)
                 )
             }
         }
@@ -156,7 +159,7 @@ fun VoiceMessage(player: VoicePlayer, msg: ChatMessage, trusted: Boolean, onErro
                 Icon(Icons.Default.Mic, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     if (active) "${formatDuration(player.positionMs)} / ${formatDuration(total)}"
-                    else if (total > 0) formatDuration(total) else "Sprachnachricht",
+                    else if (total > 0) formatDuration(total) else stringResource(R.string.voice_message),
                     style = MaterialTheme.typography.labelSmall
                 )
             }

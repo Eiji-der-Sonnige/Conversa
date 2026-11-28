@@ -1,5 +1,6 @@
 package io.github.eiji_der_sonnige.conversa.data
 
+import io.github.eiji_der_sonnige.conversa.R
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -75,12 +76,12 @@ data class ChatMessage(
         .put("text", text).put("at", createdAt).put("status", status.name)
         .apply { media?.let { put("media", it.toJson()) } }
 
-    fun preview(): String = when (type) {
+    fun preview(ctx: android.content.Context): String = when (type) {
         MsgType.TEXT -> text
-        MsgType.IMAGE -> "📷 Bild"
-        MsgType.VIDEO -> "🎬 Video"
-        MsgType.AUDIO -> "🎤 Sprachnachricht"
-        MsgType.FILE -> "📎 Datei"
+        MsgType.IMAGE -> ctx.getString(R.string.preview_image)
+        MsgType.VIDEO -> ctx.getString(R.string.preview_video)
+        MsgType.AUDIO -> ctx.getString(R.string.preview_voice)
+        MsgType.FILE -> ctx.getString(R.string.preview_file)
     }
 
     companion object {

@@ -1,5 +1,7 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import io.github.eiji_der_sonnige.conversa.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -77,25 +79,25 @@ fun ChatListScreen(vm: MainViewModel, m: Messenger) {
                         Text("Conversa")
                         val up = relayStatus.count { it.value }
                         Text(
-                            if (up > 0) "● $up/${relayStatus.size} Relays verbunden" else "○ Verbinde…",
+                            if (up > 0) stringResource(R.string.relays_connected, up, relayStatus.size) else stringResource(R.string.connecting),
                             style = MaterialTheme.typography.labelSmall,
                             color = if (up > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                         )
                     }
                 },
                 actions = {
-                    IconButton({ vm.navigate(Screen.Settings) }) { Icon(Icons.Default.Settings, "Einstellungen") }
+                    IconButton({ vm.navigate(Screen.Settings) }) { Icon(Icons.Default.Settings, stringResource(R.string.settings)) }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton({ showAdd = true }) { Icon(Icons.Default.PersonAdd, "Kontakt hinzufügen") }
+            FloatingActionButton({ showAdd = true }) { Icon(Icons.Default.PersonAdd, stringResource(R.string.add_contact)) }
         }
     ) { pad ->
         if (rows.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(pad).padding(32.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    "Noch keine Kontakte.\nTeile deine ID (Einstellungen) oder füge einen Kontakt über „+“ hinzu.",
+                    stringResource(R.string.no_contacts),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -108,7 +110,7 @@ fun ChatListScreen(vm: MainViewModel, m: Messenger) {
                         headlineContent = { Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         supportingContent = {
                             Text(
-                                if (!c.accepted) "Nachrichtenanfrage" else last?.preview() ?: "",
+                                if (!c.accepted) stringResource(R.string.message_request) else last?.preview(ctx) ?: "",
                                 maxLines = 1, overflow = TextOverflow.Ellipsis
                             )
                         },
@@ -116,7 +118,7 @@ fun ChatListScreen(vm: MainViewModel, m: Messenger) {
                             Column(horizontalAlignment = Alignment.End) {
                                 last?.let { Text(formatTime(it.createdAt), style = MaterialTheme.typography.labelSmall) }
                                 val unread = messages[c.pubHex].orEmpty().count { !it.fromMe && it.status == MsgStatus.RECEIVED }
-                                if (!c.accepted) Badge { Text("Neu") }
+                                if (!c.accepted) Badge { Text(stringResource(R.string.badge_new)) }
                                 else if (unread > 0) Badge { Text(if (unread > 99) "99+" else unread.toString()) }
                             }
                         }
@@ -147,14 +149,14 @@ fun AddContactDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Kontakt hinzufügen") },
+        title = { Text(stringResource(R.string.add_contact)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(id, { id = it.trim() }, label = { Text("Kontakt-ID (npub1…)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(name, { name = it }, label = { Text("Name (nur lokal sichtbar)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(id, { id = it.trim() }, label = { Text(stringResource(R.string.contact_id_hint)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name_local_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         },
-        confirmButton = { TextButton({ onAdd(id, name) }, enabled = id.isNotBlank()) { Text("Hinzufügen") } },
-        dismissButton = { TextButton(onDismiss) { Text("Abbrechen") } }
+        confirmButton = { TextButton({ onAdd(id, name) }, enabled = id.isNotBlank()) { Text(stringResource(R.string.add)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }

@@ -1,5 +1,7 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import io.github.eiji_der_sonnige.conversa.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -82,9 +84,9 @@ fun CallScreen(m: Messenger, state: CallState) {
     }
     val name = contacts[peer]?.name ?: Npub.short(peer)
     val status = when (state) {
-        is CallState.Outgoing -> "Klingelt…"
-        is CallState.Incoming -> if (video) "Eingehender Videoanruf" else "Eingehender Anruf"
-        is CallState.Active -> if (state.connected) "🔒 Verbunden (P2P, verschlüsselt)" else "Verbinde…"
+        is CallState.Outgoing -> stringResource(R.string.ringing)
+        is CallState.Incoming -> stringResource(if (video) R.string.incoming_video_call else R.string.incoming_call)
+        is CallState.Active -> stringResource(if (state.connected) R.string.call_connected else R.string.call_connecting)
         CallState.Idle -> ""
     }
 
@@ -120,21 +122,21 @@ fun CallScreen(m: Messenger, state: CallState) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (state is CallState.Incoming) {
-                RoundButton(Icons.Default.CallEnd, "Ablehnen", Color(0xFFD32F2F)) { calls.reject() }
-                RoundButton(Icons.Default.Call, "Annehmen", Color(0xFF2E7D32)) {
+                RoundButton(Icons.Default.CallEnd, stringResource(R.string.reject), Color(0xFFD32F2F)) { calls.reject() }
+                RoundButton(Icons.Default.Call, stringResource(R.string.accept), Color(0xFF2E7D32)) {
                     acceptPerms.launch(
                         if (video) arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA)
                         else arrayOf(Manifest.permission.RECORD_AUDIO)
                     )
                 }
             } else {
-                RoundButton(if (mic) Icons.Default.Mic else Icons.Default.MicOff, "Mikrofon", Color(0x33FFFFFF)) { calls.toggleMic() }
+                RoundButton(if (mic) Icons.Default.Mic else Icons.Default.MicOff, stringResource(R.string.microphone), Color(0x33FFFFFF)) { calls.toggleMic() }
                 if (video) {
-                    RoundButton(if (cam) Icons.Default.Videocam else Icons.Default.VideocamOff, "Kamera", Color(0x33FFFFFF)) { calls.toggleCamera() }
-                    RoundButton(Icons.Default.Cameraswitch, "Kamera wechseln", Color(0x33FFFFFF)) { calls.switchCamera() }
+                    RoundButton(if (cam) Icons.Default.Videocam else Icons.Default.VideocamOff, stringResource(R.string.camera), Color(0x33FFFFFF)) { calls.toggleCamera() }
+                    RoundButton(Icons.Default.Cameraswitch, stringResource(R.string.switch_camera), Color(0x33FFFFFF)) { calls.switchCamera() }
                 }
-                RoundButton(if (speaker) Icons.AutoMirrored.Filled.VolumeUp else Icons.Default.Hearing, "Lautsprecher", Color(0x33FFFFFF)) { calls.toggleSpeaker() }
-                RoundButton(Icons.Default.CallEnd, "Auflegen", Color(0xFFD32F2F)) { calls.hangup() }
+                RoundButton(if (speaker) Icons.AutoMirrored.Filled.VolumeUp else Icons.Default.Hearing, stringResource(R.string.speaker), Color(0x33FFFFFF)) { calls.toggleSpeaker() }
+                RoundButton(Icons.Default.CallEnd, stringResource(R.string.hang_up), Color(0xFFD32F2F)) { calls.hangup() }
             }
         }
     }

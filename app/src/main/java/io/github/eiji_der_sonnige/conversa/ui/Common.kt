@@ -1,5 +1,7 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import io.github.eiji_der_sonnige.conversa.R
+import androidx.compose.ui.res.stringResource
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -34,7 +36,7 @@ fun qrBitmap(text: String, size: Int = 640): Bitmap {
 @Composable
 fun QrCode(text: String, size: Dp = 220.dp) {
     val bmp = remember(text) { qrBitmap(text) }
-    Image(bmp.asImageBitmap(), contentDescription = "QR-Code", modifier = Modifier.size(size).background(Color.White))
+    Image(bmp.asImageBitmap(), contentDescription = stringResource(R.string.qr_code), modifier = Modifier.size(size).background(Color.White))
 }
 
 /** Kopiert in die Zwischenablage; sensible Inhalte werden als solche markiert (keine Vorschau). */
@@ -53,12 +55,13 @@ fun copyToClipboard(ctx: Context, label: String, text: String, sensitive: Boolea
 @Composable
 fun AssetTextDialog(title: String, assetPath: String, onDismiss: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val missing = stringResource(R.string.text_unavailable)
     val text = remember(assetPath) {
-        try {
-            ctx.assets.open(assetPath).bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            "Text nicht verfügbar."
-        }
+        // Rechtstexte gibt es auf Deutsch (maßgeblich) und Englisch; andere Sprachen erhalten die englische Fassung.
+        val localized = if (java.util.Locale.getDefault().language != "de") assetPath.replace(".txt", "_en.txt") else assetPath
+        listOf(localized, assetPath).firstNotNullOfOrNull { p ->
+            try { ctx.assets.open(p).bufferedReader().use { it.readText() } } catch (e: Exception) { null }
+        } ?: missing
     }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
@@ -73,11 +76,12 @@ fun AssetTextDialog(title: String, assetPath: String, onDismiss: () -> Unit) {
                 )
             }
         },
-        confirmButton = { androidx.compose.material3.TextButton(onDismiss) { androidx.compose.material3.Text("Schließen") } }
+        confirmButton = { androidx.compose.material3.TextButton(onDismiss) { androidx.compose.material3.Text(stringResource(R.string.close)) } }
     )
 }
 
 fun formatTime(epochSec: Long): String {
-    val fmt = java.text.SimpleDateFormat("dd.MM. HH:mm", java.util.Locale.GERMANY)
+    val loc = java.util.Locale.getDefault()
+    val fmt = java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "ddMMHHmm"), loc)
     return fmt.format(java.util.Date(epochSec * 1000))
 }

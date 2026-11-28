@@ -26,12 +26,12 @@ object Notifier {
     fun createChannel(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, "Nachrichten", NotificationManager.IMPORTANCE_HIGH).apply {
+            NotificationChannel(CHANNEL, ctx.getString(R.string.ch_messages), NotificationManager.IMPORTANCE_HIGH).apply {
                 lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_CALLS, "Eingehende Anrufe", NotificationManager.IMPORTANCE_HIGH).apply {
+            NotificationChannel(CHANNEL_CALLS, ctx.getString(R.string.ch_calls), NotificationManager.IMPORTANCE_HIGH).apply {
                 lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 setSound(
                     RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
@@ -44,8 +44,8 @@ object Notifier {
             }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_SERVICE, "Hintergrundverbindung", NotificationManager.IMPORTANCE_MIN).apply {
-                description = "Dauerhafter Hinweis, solange Conversa im Hintergrund verbunden bleibt. Kann ausgeblendet werden."
+            NotificationChannel(CHANNEL_SERVICE, ctx.getString(R.string.ch_background), NotificationManager.IMPORTANCE_MIN).apply {
+                description = ctx.getString(R.string.ch_background_desc)
                 setShowBadge(false)
             }
         )
@@ -65,7 +65,7 @@ object Notifier {
         val n = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_conversa)
             .setContentTitle("Conversa")
-            .setContentText("Neue verschlüsselte Nachricht")
+            .setContentText(ctx.getString(R.string.notif_new_message))
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setAutoCancel(true)
             .setContentIntent(openApp(ctx))
@@ -91,8 +91,8 @@ object Notifier {
         val open = openApp(ctx)
         val n = NotificationCompat.Builder(ctx, CHANNEL_CALLS)
             .setSmallIcon(R.drawable.ic_stat_conversa)
-            .setContentTitle(if (video) "Eingehender Videoanruf" else "Eingehender Anruf")
-            .setContentText("Tippen, um Conversa zu öffnen und anzunehmen")
+            .setContentTitle(ctx.getString(if (video) R.string.incoming_video_call else R.string.incoming_call))
+            .setContentText(ctx.getString(R.string.notif_call_text))
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
@@ -101,8 +101,8 @@ object Notifier {
             .setTimeoutAfter(60_000)
             .setContentIntent(open)
             .setFullScreenIntent(open, true)
-            .addAction(0, "Öffnen", open)
-            .addAction(0, "Ablehnen", reject)
+            .addAction(0, ctx.getString(R.string.open), open)
+            .addAction(0, ctx.getString(R.string.reject), reject)
             .build()
             .apply { flags = flags or Notification.FLAG_INSISTENT } // klingelt wiederholt bis zur Reaktion
         try {
@@ -118,8 +118,8 @@ object Notifier {
     fun serviceNotification(ctx: Context): Notification =
         NotificationCompat.Builder(ctx, CHANNEL_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_conversa)
-            .setContentTitle("Conversa empfängt im Hintergrund")
-            .setContentText("Verbunden mit den Relays. Abschaltbar in den Einstellungen.")
+            .setContentTitle(ctx.getString(R.string.notif_bg_title))
+            .setContentText(ctx.getString(R.string.notif_bg_text))
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
             .setShowWhen(false)
