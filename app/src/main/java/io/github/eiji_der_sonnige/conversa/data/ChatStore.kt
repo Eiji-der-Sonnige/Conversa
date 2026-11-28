@@ -8,8 +8,43 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import io.github.eiji_der_sonnige.conversa.core.GroupRules
+import io.github.eiji_der_sonnige.conversa.core.GroupState
+import io.github.eiji_der_sonnige.conversa.nostr.Event
 import org.json.JSONArray
 import org.json.JSONObject
+
+/**
+ * Eine Gruppe aus Sicht dieses Geräts: der aktuelle, geprüfte Zustand, die Gründung (beweist den Ersteller),
+ * der Vorgänger (für die Auflösung gleichzeitiger Änderungen), ob der Beitritt bestätigt wurde und ob man
+ * entfernt wurde (dann nur noch lesbar).
+ */
+data class GroupEntry(
+    val state: GroupState,
+    val genesis: Event,
+    val prev: GroupState?,
+    val accepted: Boolean,
+    val removed: Boolean,
+    /** Ehemalige Mitglieder -> Zeitpunkt ihres Austritts (ältere Nachrichten von ihnen bleiben gültig). */
+    val left: Map<String, Long> = emptyMap(),
+) {
+    val gid get() = state.gid
+    fun toJson(): JSONObject = JSONObject()
+        .put("genesis", genesis.toJson()).put("state", state.event.toJson())
+        .apply { prev?.let { put("prev", it.event.toJson()) } }
+        .put("ok", accepted).put("removed", removed)
+        .put("left", JSONObject(left as Map<*, *>))
+
+    companion object {
+        fun fromJson(o: JSONObject): GroupEntry? {
+            val genesis = Event.fromJson(o.getJSONObject("genesis"))
+            val state = GroupRules.parse(Event.fromJson(o.getJSONObject("state"))) ?: return null
+            val prev = o.optJSONObject("prev")?.let { GroupRules.parse(Event.fromJson(it)) }
+            val left = o.optJSONObject("left")?.let { l -> l.keys().asSequence().associateWith { l.getLong(it) } } ?: emptyMap()
+            return GroupEntry(state, genesis, prev, o.optBoolean("ok"), o.optBoolean("removed"), left)
+        }
+    }
+}
 
 /**
  * Lokaler, verschlüsselter Cache für Kontakte und Nachrichten. Die maßgebliche Kopie liegt
@@ -45,6 +80,11 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
      */
     private val _aliases = MutableStateFlow<Map<String, String>>(emptyMap())
     val aliases: StateFlow<Map<String, String>> = _aliases
+
+    private val _groups = MutableStateFlow<Map<String, GroupEntry>>(emptyMap())
+    val groups: StateFlow<Map<String, GroupEntry>> = _groups
+    /** Gelöschte bzw. abgelehnte Gruppen: Kopien vom Netzwerk sollen sie nicht wiederherstellen. */
+    private val deletedGroups = LinkedHashSet<String>()
     val blocked: StateFlow<Set<String>> = _blocked
 
     private var saveJob: Job? = null
@@ -62,6 +102,10 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
             o.optJSONArray("deletedByPeer")?.strings()?.let { deletedByPeer.addAll(it) }
         }
         _blocked.value = o.optJSONArray("blocked")?.strings()?.toSet() ?: emptySet()
+        _groups.value = o.optJSONArray("groups")?.objects()
+            ?.mapNotNull { try { GroupEntry.fromJson(it) } catch (e: Exception) { null } }
+            ?.associateBy { it.gid } ?: emptyMap()
+        synchronized(deleted) { o.optJSONArray("deletedGroups")?.strings()?.let { deletedGroups.addAll(it) } }
         _aliases.value = o.optJSONObject("aliases")?.let { a -> a.keys().asSequence().associateWith { a.getString(it) } } ?: emptyMap()
         // Ab Version 2 gibt es „ungelesen“. Ältere Verläufe gelten als gelesen, sonst wäre alles plötzlich neu.
         val legacy = o.optInt("v", 1) < 2
@@ -83,6 +127,8 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
             .put("totp", totpSecret ?: "")
             .put("blocked", JSONArray(_blocked.value.toList()))
             .put("aliases", JSONObject(_aliases.value as Map<*, *>))
+            .put("groups", JSONArray().apply { _groups.value.values.forEach { put(it.toJson()) } })
+            .put("deletedGroups", JSONArray().apply { synchronized(deleted) { deletedGroups.forEach { put(it) } } })
             .put("contacts", JSONArray().apply { _contacts.value.values.forEach { put(it.toJson()) } })
             .put("messages", JSONArray().apply {
                 _messages.value.values.forEach { list -> list.forEach { put(it.toJson()) } }
@@ -116,6 +162,27 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
     }
 
     fun isBlocked(pub: String) = pub in _blocked.value
+
+    fun putGroup(e: GroupEntry) {
+        _groups.update { it + (e.gid to e) }
+        scheduleSave()
+    }
+
+    fun isGroupDeleted(gid: String) = synchronized(deleted) { gid in deletedGroups }
+
+    /** Entfernt eine Gruppe samt Nachrichten; mit [tombstone] wird sie auch künftig ignoriert. */
+    fun removeGroup(gid: String, tombstone: Boolean) {
+        _groups.update { it - gid }
+        _messages.update { it - groupChatKey(gid) }
+        _aliases.update { it - groupChatKey(gid) }
+        if (tombstone) synchronized(deleted) {
+            deletedGroups.add(gid)
+            while (deletedGroups.size > MAX_DELETED_GROUPS) deletedGroups.remove(deletedGroups.first())
+        }
+        scheduleSave()
+    }
+
+    fun pendingInviteCount(): Int = _groups.value.values.count { !it.accepted && !it.removed }
 
     /** Lokaler Anzeigename; leer = zurück zum ursprünglichen Namen. */
     fun setAlias(pub: String, name: String?) {
@@ -248,6 +315,7 @@ class ChatStore(private val ctx: Context, owner: String, private val scope: Coro
     companion object {
         private const val MAX_DELETED = 20_000
         const val MAX_NAME = 64
+        private const val MAX_DELETED_GROUPS = 1000
         private const val MAX_BLOCKED = 1000
     }
 }

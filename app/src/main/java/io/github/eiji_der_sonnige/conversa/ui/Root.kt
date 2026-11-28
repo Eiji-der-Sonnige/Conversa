@@ -45,6 +45,7 @@ fun ConversaRoot(vm: MainViewModel) {
                 Screen.Chats -> if (m != null) ChatListScreen(vm, m)
                 is Screen.Chat -> if (m != null) ChatScreen(vm, m, s.peer)
                 Screen.Settings -> if (m != null) SettingsScreen(vm, m)
+                is Screen.GroupInfo -> if (m != null) GroupInfoScreen(vm, m, s.gid)
             }
             val unlocked = screen !is Screen.TotpVerify && screen !is Screen.Login
             if (m != null && unlocked && callState != CallState.Idle) {

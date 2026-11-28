@@ -1,5 +1,8 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import io.github.eiji_der_sonnige.conversa.data.gidOf
+import io.github.eiji_der_sonnige.conversa.data.isGroupChat
+import androidx.compose.material.icons.filled.Groups
 import io.github.eiji_der_sonnige.conversa.R
 import androidx.compose.ui.res.stringResource
 import android.Manifest
@@ -113,7 +116,17 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
     val settings by vm.settings.collectAsState()
     val contact = contacts[peer]
     val aliases by m.store.aliases.collectAsState()
-    val displayName = aliases[peer] ?: contact?.name
+    val groups by m.store.groups.collectAsState()
+    val isGroup = isGroupChat(peer)
+    val group = if (isGroup) groups[gidOf(peer)] else null
+    val displayName = aliases[peer] ?: group?.state?.name ?: contact?.name
+    val canWrite = if (isGroup) group != null && group.accepted && !group.removed else true
+    var confirmJoin by remember { mutableStateOf(false) }
+    // Gruppe wurde gelöscht oder verlassen, während der Chat offen war
+    if (isGroup && group == null) LaunchedEffect(Unit) { vm.navigate(Screen.Chats) }
+    val youLabel = stringResource(R.string.you)
+    fun memberName(pub: String) = if (pub == m.identity.pubHex) youLabel
+        else aliases[pub] ?: contacts[pub]?.name ?: Npub.short(pub)
     val msgs = all[peer].orEmpty()
     var input by remember { mutableStateOf("") }
     var menu by remember { mutableStateOf(false) }
@@ -222,7 +235,13 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                 title = {
                     Column {
                         Text(displayName ?: stringResource(R.string.chat), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(stringResource(R.string.e2e_encrypted), style = MaterialTheme.typography.labelSmall)
+                        if (group != null) {
+                            val n = group.state.members.size
+                            Text(LocalContext.current.resources.getQuantityString(R.plurals.member_count, n, n) +
+                                " · " + stringResource(R.string.e2e_encrypted), style = MaterialTheme.typography.labelSmall)
+                        } else {
+                            Text(stringResource(R.string.e2e_encrypted), style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 },
                 actions = {
@@ -230,11 +249,17 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                         IconButton({ call(false) }) { Icon(Icons.Default.Call, stringResource(R.string.voice_call)) }
                         IconButton({ call(true) }) { Icon(Icons.Default.Videocam, stringResource(R.string.video_call)) }
                     }
-                    IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.menu)) }
-                    DropdownMenu(menu, { menu = false }) {
-                        DropdownMenuItem({ Text(stringResource(R.string.rename)) }, { menu = false; rename = true })
-                        DropdownMenuItem({ Text(stringResource(R.string.delete_contact_chat)) }, { menu = false; confirmDelete = true })
-                        DropdownMenuItem({ Text(stringResource(R.string.block)) }, { menu = false; confirmBlock = true })
+                    if (group != null) {
+                        IconButton({ vm.navigate(Screen.GroupInfo(group.gid)) }) {
+                            Icon(Icons.Default.Groups, stringResource(R.string.group_info))
+                        }
+                    } else {
+                        IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.menu)) }
+                        DropdownMenu(menu, { menu = false }) {
+                            DropdownMenuItem({ Text(stringResource(R.string.rename)) }, { menu = false; rename = true })
+                            DropdownMenuItem({ Text(stringResource(R.string.delete_contact_chat)) }, { menu = false; confirmDelete = true })
+                            DropdownMenuItem({ Text(stringResource(R.string.block)) }, { menu = false; confirmBlock = true })
+                        }
                     }
                 }
             )
@@ -254,6 +279,25 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                     }
                 }
             }
+            if (group != null && !group.accepted && !group.removed) {
+                Card(Modifier.fillMaxWidth().padding(8.dp)) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.group_invite_from, memberName(group.state.signer), group.state.name))
+                        Text(stringResource(R.string.group_invite_members, group.state.members.joinToString { memberName(it) }),
+                            style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button({ confirmJoin = true }) { Text(stringResource(R.string.group_join)) }
+                            OutlinedButton({ vm.groupAction { it.leave(group.gid) }; vm.navigate(Screen.Chats) }) {
+                                Text(stringResource(R.string.reject))
+                            }
+                        }
+                    }
+                }
+            } else if (group != null && group.removed) {
+                Card(Modifier.fillMaxWidth().padding(8.dp)) {
+                    Text(stringResource(R.string.group_removed_text), Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+                }
+            }
             LazyColumn(
                 Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp),
                 state = listState,
@@ -262,7 +306,8 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                 items(msgs, key = { it.id }) { msg ->
                     MessageBubble(
                         m, player, msg,
-                        trusted = contact?.accepted == true || msg.fromMe,
+                        trusted = (if (isGroup) group?.accepted == true else contact?.accepted == true) || msg.fromMe,
+                        senderName = if (isGroup && !msg.fromMe) memberName(msg.sender) else null,
                         showRead = settings.readReceipts,
                         onRetry = { vm.resend(msg) },
                         onPlay = { videoToPlay = msg },
@@ -272,7 +317,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                     )
                 }
             }
-            Row(
+            if (canWrite) Row(
                 Modifier.fillMaxWidth().navigationBarsPadding().padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -346,7 +391,8 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
         )
     }
     deleteMsg?.let { msg ->
-        val canEveryone = msg.fromMe && msg.status.rank >= MsgStatus.SENT.rank
+        // In Gruppen nur „für mich“: Die Inhalte für alle löschen kann nur ein Admin (die ganze Gruppe).
+        val canEveryone = !isGroup && msg.fromMe && msg.status.rank >= MsgStatus.SENT.rank
         AlertDialog(
             onDismissRequest = { deleteMsg = null },
             title = { Text(stringResource(R.string.delete_msg_q)) },
@@ -371,6 +417,17 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
             dismissButton = { TextButton({ deleteMsg = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
+    if (confirmJoin && group != null) {
+        AlertDialog(
+            onDismissRequest = { confirmJoin = false },
+            title = { Text(stringResource(R.string.group_join_q, group.state.name)) },
+            text = { Text(stringResource(R.string.group_join_notice)) },
+            confirmButton = {
+                TextButton({ confirmJoin = false; vm.groupAction { it.accept(group.gid) } }) { Text(stringResource(R.string.group_join_confirm)) }
+            },
+            dismissButton = { TextButton({ confirmJoin = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
     videoToPlay?.let { VideoDialog(m, it) { videoToPlay = null } }
 }
 
@@ -381,6 +438,7 @@ private fun MessageBubble(
     player: VoicePlayer,
     msg: ChatMessage,
     trusted: Boolean,
+    senderName: String?,
     showRead: Boolean,
     onRetry: () -> Unit,
     onPlay: () -> Unit,
@@ -399,6 +457,10 @@ private fun MessageBubble(
                     .combinedClickable(onClick = {}, onLongClick = { actions = true }, onLongClickLabel = stringResource(R.string.options))
             ) {
                 Column(Modifier.padding(10.dp)) {
+                    senderName?.let {
+                        Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     when {
                         msg.media == null -> Text(msg.text)
                         msg.type == MsgType.IMAGE -> EncryptedImage(m, msg, trusted)

@@ -27,6 +27,8 @@ import io.github.eiji_der_sonnige.conversa.data.MsgType
 import io.github.eiji_der_sonnige.conversa.data.mediaType
 import io.github.eiji_der_sonnige.conversa.media.VoiceRecorder
 import io.github.eiji_der_sonnige.conversa.data.objects
+import io.github.eiji_der_sonnige.conversa.data.gidOf
+import io.github.eiji_der_sonnige.conversa.data.isGroupChat
 import io.github.eiji_der_sonnige.conversa.data.strings
 import io.github.eiji_der_sonnige.conversa.media.MediaService
 import io.github.eiji_der_sonnige.conversa.nostr.Event
@@ -82,6 +84,14 @@ class Messenger(
     val store = ChatStore(ctx, identity.pubHex, scope)
     val media = MediaService(ctx, http) { settings.blossomServers }
     val calls = CallManager(ctx, scope, ::iceConfig) { peer, payload -> sendSignal(peer, payload) }
+    val groups = GroupService(
+        ctx, identity, store,
+        publish = { rumor, to, chatKey, msgId -> publishRumor(rumor, to, chatKey, msgId) },
+        toMessage = ::toMessage,
+        addIncoming = ::addIncoming,
+        dropMedia = { media.deleteCached(it) },
+        accountChanged = ::scheduleAccountPublish,
+    )
 
     private val _totpSecret = MutableStateFlow(store.totpSecret)
     val totpSecret: StateFlow<String?> = _totpSecret
@@ -230,6 +240,10 @@ class Messenger(
         val u = GiftWrap.unwrap(wrap, identity.privKey) ?: return
         val r = u.rumor
         val fromMe = u.sender == identity.pubHex
+        r.tag("g")?.let { gid ->
+            groups.onRumor(r, u.sender, fromMe, gid)
+            return
+        }
         val peer = if (fromMe) r.tagValues("p").firstOrNull { it != identity.pubHex } ?: return else u.sender
         if (store.isBlocked(peer)) return // auch eigene, synchronisierte Kopien (Chat bleibt weg)
         val isMessage = r.kind == GiftWrap.KIND_CHAT || r.kind == GiftWrap.KIND_FILE
@@ -254,22 +268,7 @@ class Messenger(
                     try { calls.onSignal(peer, JSONObject(r.content)) } catch (_: Exception) {}
                 }
             }
-            GiftWrap.KIND_CHAT -> addIncoming(
-                ChatMessage(r.id, peer, fromMe, MsgType.TEXT, r.content, null, r.createdAt,
-                    if (fromMe) MsgStatus.SENT else MsgStatus.RECEIVED)
-            )
-            GiftWrap.KIND_FILE -> {
-                val mime = r.tag("file-type") ?: "application/octet-stream"
-                val key = r.tag("decryption-key") ?: return
-                val nonce = r.tag("decryption-nonce") ?: return
-                val sha = r.tag("x") ?: return
-                val m = Media(r.content, mime, key.lowercase(), nonce.lowercase(), sha.lowercase(),
-                    r.tag("size")?.toLongOrNull() ?: 0L,
-                    r.tag("duration")?.toLongOrNull()?.coerceIn(0, Media.MAX_DURATION_MS) ?: 0L)
-                if (!m.isWellFormed()) return
-                addIncoming(ChatMessage(r.id, peer, fromMe, mediaType(mime), "", m, r.createdAt,
-                    if (fromMe) MsgStatus.SENT else MsgStatus.RECEIVED))
-            }
+            GiftWrap.KIND_CHAT, GiftWrap.KIND_FILE -> toMessage(r, peer, fromMe, "")?.let { addIncoming(it) }
             GiftWrap.KIND_DELETE -> {
                 val ids = r.tagValues("e").filter { HEX64.matches(it) }.take(MAX_IDS_PER_EVENT)
                 if (ids.isEmpty()) return
@@ -290,6 +289,24 @@ class Messenger(
         }
     }
 
+    /** Text- oder Dateinachricht aus einem Rumor (Kind 14/15); prüft die vom Absender gelieferten Mediendaten. */
+    private fun toMessage(r: Event, chatKey: String, fromMe: Boolean, sender: String): ChatMessage? {
+        val status = if (fromMe) MsgStatus.SENT else MsgStatus.RECEIVED
+        if (r.kind == GiftWrap.KIND_CHAT) {
+            return ChatMessage(r.id, chatKey, fromMe, MsgType.TEXT, r.content.take(20_000), null, r.createdAt, status, sender)
+        }
+        if (r.kind != GiftWrap.KIND_FILE) return null
+        val mime = r.tag("file-type") ?: "application/octet-stream"
+        val key = r.tag("decryption-key") ?: return null
+        val nonce = r.tag("decryption-nonce") ?: return null
+        val sha = r.tag("x") ?: return null
+        val m = Media(r.content, mime, key.lowercase(), nonce.lowercase(), sha.lowercase(),
+            r.tag("size")?.toLongOrNull() ?: 0L,
+            r.tag("duration")?.toLongOrNull()?.coerceIn(0, Media.MAX_DURATION_MS) ?: 0L)
+        if (!m.isWellFormed()) return null
+        return ChatMessage(r.id, chatKey, fromMe, mediaType(mime), "", m, r.createdAt, status, sender)
+    }
+
     private fun addIncoming(m: ChatMessage) {
         val msg = if (m.fromMe && earlyReads.remove(m.id)) m.copy(status = MsgStatus.READ) else m
         val isNew = store.upsertMessage(msg)
@@ -307,7 +324,8 @@ class Messenger(
      */
     fun markRead(peer: String) {
         val unread = store.markRead(peer)
-        if (unread.isEmpty() || !settings.readReceipts) return
+        // In Gruppen gibt es keine Lesebestätigungen (sonst erführe jedes Mitglied, wer wann liest).
+        if (unread.isEmpty() || !settings.readReceipts || isGroupChat(peer)) return
         if (store.contacts.value[peer]?.accepted != true) return
         val cutoff = Event.now() - 30L * 24 * 3600
         val ids = unread.filter { it.createdAt > cutoff && HEX64.matches(it.id) }.map { it.id }
@@ -324,37 +342,46 @@ class Messenger(
 
     // ------------------------------------------------------------------ Senden
 
-    private fun publishRumor(rumor: Event, peer: String, msgId: String?) {
-        val toPeer = GiftWrap.wrap(rumor, identity.privKey, peer)
-        val toSelf = GiftWrap.wrap(rumor, identity.privKey, identity.pubHex) // Multi-Device-Verlauf
-        if (msgId != null) outbox[msgId] = listOf(toPeer, toSelf)
-        publishWraps(peer, msgId, toPeer, toSelf)
+    /**
+     * Verpackt den Rumor einzeln für jeden Empfänger (1:1: einer; Gruppe: jedes Mitglied, NIP-17) und für die
+     * eigenen Geräte (Multi-Device-Verlauf).
+     */
+    private fun publishRumor(rumor: Event, recipients: List<String>, chatKey: String, msgId: String?) {
+        val toPeers = recipients.map { GiftWrap.wrap(rumor, identity.privKey, it) }
+        val toSelf = GiftWrap.wrap(rumor, identity.privKey, identity.pubHex)
+        if (msgId != null) outbox[msgId] = toPeers + toSelf
+        publishWraps(chatKey, msgId, toPeers, toSelf)
     }
 
-    private fun publishWraps(peer: String, msgId: String?, toPeer: Event, toSelf: Event) {
-        if (msgId != null) pendingAcks[toPeer.id] = peer to msgId
-        relays.publish(toPeer)
+    private fun publishWraps(chatKey: String, msgId: String?, toPeers: List<Event>, toSelf: Event) {
+        if (msgId != null) toPeers.forEach { pendingAcks[it.id] = chatKey to msgId }
+        toPeers.forEach { relays.publish(it) }
         relays.publish(toSelf)
         if (msgId != null) {
             scope.launch {
                 delay(20_000)
                 // Zuordnung bleibt erhalten: Der Pool sendet gepufferte Events nach einer Neuverbindung
                 // erneut, eine spätere Bestätigung macht aus „fehlgeschlagen“ dann noch „gesendet“.
-                if (pendingAcks.containsKey(toPeer.id)) store.updateStatus(peer, msgId, MsgStatus.FAILED)
+                if (toPeers.all { pendingAcks.containsKey(it.id) }) store.updateStatus(chatKey, msgId, MsgStatus.FAILED)
             }
         }
     }
 
+    /** Empfänger und Basis-Tags eines Chats. */
+    private fun targets(chatKey: String): Pair<List<String>, List<List<String>>> =
+        if (isGroupChat(chatKey)) groups.targets(gidOf(chatKey)) else listOf(chatKey) to listOf(listOf("p", chatKey))
+
     suspend fun sendText(peer: String, text: String) = withContext(Dispatchers.Default) {
         val clean = text.trim().take(20_000)
         if (clean.isEmpty()) return@withContext
-        val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_CHAT, listOf(listOf("p", peer)), clean)
+        val (to, tags) = targets(peer)
+        val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_CHAT, tags, clean)
         // NIP-44 verschlüsselt höchstens 64 KiB; Rumor wird zweifach verpackt (Seal + Gift Wrap).
         if (rumor.toJson().toString().toByteArray(Charsets.UTF_8).size > MAX_RUMOR_BYTES) {
             throw IOException(ctx.getString(R.string.err_too_long))
         }
         store.upsertMessage(ChatMessage(rumor.id, peer, true, MsgType.TEXT, clean, null, rumor.createdAt, MsgStatus.SENDING))
-        publishRumor(rumor, peer, rumor.id)
+        publishRumor(rumor, to, peer, rumor.id)
     }
 
     suspend fun resend(m: ChatMessage) {
@@ -362,7 +389,7 @@ class Messenger(
         if (wraps != null) {
             // Dieselben Events erneut senden – kommt das Original doch noch an, entsteht kein Duplikat.
             store.updateStatus(m.peer, m.id, MsgStatus.SENDING) // FAILED -> SENDING
-            withContext(Dispatchers.Default) { publishWraps(m.peer, m.id, wraps[0], wraps[1]) }
+            withContext(Dispatchers.Default) { publishWraps(m.peer, m.id, wraps.dropLast(1), wraps.last()) }
             return
         }
         store.removeMessage(m.peer, m.id)
@@ -412,19 +439,20 @@ class Messenger(
     }
 
     private fun sendMediaRumor(peer: String, m: Media) {
-        val tags = mutableListOf(
-            listOf("p", peer),
+        val (to, base) = targets(peer)
+        val tags = base.toMutableList()
+        tags.addAll(listOf(
             listOf("file-type", m.mime),
             listOf("encryption-algorithm", "aes-gcm"),
             listOf("decryption-key", m.keyHex),
             listOf("decryption-nonce", m.nonceHex),
             listOf("x", m.sha256),
             listOf("size", m.size.toString()),
-        )
+        ))
         if (m.durationMs > 0) tags.add(listOf("duration", m.durationMs.toString()))
         val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_FILE, tags, m.url)
         store.upsertMessage(ChatMessage(rumor.id, peer, true, mediaType(m.mime), "", m, rumor.createdAt, MsgStatus.SENDING))
-        publishRumor(rumor, peer, rumor.id)
+        publishRumor(rumor, to, peer, rumor.id)
     }
 
     /**
@@ -442,13 +470,16 @@ class Messenger(
             msg.media?.let { media.deleteCached(it) }
             outbox.remove(msg.id)
         }
+        val group = isGroupChat(peer)
         fun publishDelete(ids: List<String>, to: String) = ids.chunked(MAX_IDS_PER_EVENT).forEach { chunk ->
-            val tags = listOf(listOf("p", peer)) + chunk.map { listOf("e", it) }
+            val base = if (group) listOf(listOf("g", gidOf(peer))) else listOf(listOf("p", peer))
+            val tags = base + chunk.map { listOf("e", it) }
             val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_DELETE, tags, "")
             relays.publish(GiftWrap.wrap(rumor, identity.privKey, to))
         }
         publishDelete(real.map { it.id }, identity.pubHex)
-        if (forEveryone) {
+        // In Gruppen löscht nur ein Admin – und zwar die ganze Gruppe (siehe GroupService.deleteForAll).
+        if (forEveryone && !group) {
             val mine = real.filter { it.fromMe && it.status.rank >= MsgStatus.SENT.rank }.map { it.id }
             if (mine.isNotEmpty()) publishDelete(mine, peer)
         }
@@ -481,6 +512,15 @@ class Messenger(
      * verschlüsselten Kopien liegen – lesbar nur mit deinem Schlüssel.
      */
     suspend fun deleteChat(peer: String, alsoContact: Boolean) {
+        if (isGroupChat(peer)) {
+            // Gruppe: Der Ersteller löscht sie für alle, alle anderen verlassen sie (und entfernen sie bei sich).
+            val gid = gidOf(peer)
+            val e = store.groups.value[gid] ?: return
+            withContext(Dispatchers.Default) {
+                if (e.state.creator == identity.pubHex && !e.removed) groups.deleteForAll(gid) else groups.leave(gid)
+            }
+            return
+        }
         val msgs = store.messages.value[peer].orEmpty()
         deleteMessages(peer, msgs, forEveryone = false)
         pendingAcks.entries.removeIf { it.value.first == peer }
@@ -537,6 +577,7 @@ class Messenger(
             val c = Contact.fromJson(o)
             if (store.contacts.value[c.pubHex]?.accepted != true) store.upsertContact(c)
         }
+        acc.optJSONArray("groups")?.strings()?.let { groups.markAcceptedElsewhere(it) }
         acc.optJSONArray("blocked")?.strings()?.filter { HEX64.matches(it) }?.let { store.mergeBlocked(it) }
         val totp = acc.optString("totp").takeIf { it.isNotEmpty() }
         store.setTotp(totp)
@@ -544,7 +585,7 @@ class Messenger(
         return totp
     }
 
-    private fun scheduleAccountPublish() {
+    fun scheduleAccountPublish() {
         synchronized(this) {
             accountPublishJob?.cancel()
             accountPublishJob = scope.launch {
@@ -562,6 +603,7 @@ class Messenger(
                 store.contacts.value.values.filter { it.accepted }.forEach { put(it.toJson()) }
             })
             .put("blocked", JSONArray(store.blocked.value.toList()))
+            .put("groups", JSONArray(groups.acceptedGroups()))
         val selfKey = Nip44.conversationKey(identity.privKey, identity.pubHex.hexToBytes())
         val ev = Event.sign(identity.privKey, 30078, listOf(listOf("d", accountTag)), Nip44.encrypt(acc.toString(), selfKey))
         relays.publish(ev)

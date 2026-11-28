@@ -70,11 +70,14 @@ data class ChatMessage(
     val media: Media?,
     val createdAt: Long,
     val status: MsgStatus,
+    /** Nur in Gruppen: öffentlicher Schlüssel des Absenders ([peer] ist dort die Chat-ID „g:<Gruppen-ID>“). */
+    val sender: String = "",
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("id", id).put("peer", peer).put("me", fromMe).put("type", type.name)
         .put("text", text).put("at", createdAt).put("status", status.name)
         .apply { media?.let { put("media", it.toJson()) } }
+        .apply { if (sender.isNotEmpty()) put("from", sender) }
 
     fun preview(ctx: android.content.Context): String = when (type) {
         MsgType.TEXT -> text
@@ -90,7 +93,8 @@ data class ChatMessage(
             MsgType.valueOf(o.getString("type")), o.optString("text"),
             o.optJSONObject("media")?.let { Media.fromJson(it) },
             o.getLong("at"),
-            MsgStatus.valueOf(o.getString("status")).let { if (it == MsgStatus.SENDING) MsgStatus.FAILED else it }
+            MsgStatus.valueOf(o.getString("status")).let { if (it == MsgStatus.SENDING) MsgStatus.FAILED else it },
+            o.optString("from"),
         )
     }
 }
@@ -102,6 +106,11 @@ data class Contact(val pubHex: String, val name: String, val accepted: Boolean =
         fun fromJson(o: JSONObject) = Contact(o.getString("pub"), o.getString("name"), o.optBoolean("ok", true))
     }
 }
+
+/** Chat-IDs von Gruppen beginnen mit „g:“, alle anderen sind öffentliche Schlüssel (1:1-Chats). */
+fun isGroupChat(chatKey: String) = chatKey.startsWith("g:")
+fun groupChatKey(gid: String) = "g:$gid"
+fun gidOf(chatKey: String) = chatKey.removePrefix("g:")
 
 fun JSONArray.objects(): List<JSONObject> = (0 until length()).map { getJSONObject(it) }
 fun JSONArray.strings(): List<String> = (0 until length()).map { getString(it) }

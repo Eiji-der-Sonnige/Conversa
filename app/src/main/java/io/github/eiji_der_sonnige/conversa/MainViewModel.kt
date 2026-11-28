@@ -33,6 +33,7 @@ sealed interface Screen {
     data class Chat(val peer: String) : Screen
     data object Settings : Screen
     data class TotpSetup(val secret: String) : Screen
+    data class GroupInfo(val gid: String) : Screen
 }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -256,6 +257,51 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val m = _messenger.value ?: return
         viewModelScope.launch {
             try { m.deleteChat(peer, alsoContact) } catch (e: Exception) { _error.value = ctx.getString(R.string.err_delete, e.message ?: "") }
+        }
+    }
+
+    /** Liest npub-Eingaben (eine pro Zeile/Komma); null bei einer ungültigen ID (Fehler wird angezeigt). */
+    private fun parseIds(input: String): Set<String>? {
+        val out = mutableSetOf<String>()
+        for (raw in input.split(Regex("[\\s,;]+")).filter { it.isNotBlank() }) {
+            val pub = Npub.parse(raw) ?: run { _error.value = ctx.getString(R.string.err_invalid_ids, raw.take(24)); return null }
+            out.add(pub)
+        }
+        return out
+    }
+
+    fun createGroup(name: String, selected: Set<String>, extraIds: String): Boolean {
+        val m = _messenger.value ?: return false
+        if (name.isBlank()) { _error.value = ctx.getString(R.string.err_group_name); return false }
+        val extra = parseIds(extraIds) ?: return false
+        viewModelScope.launch {
+            try {
+                val gid = withContext(Dispatchers.Default) { m.groups.create(name, selected + extra) }
+                navigate(Screen.Chat(io.github.eiji_der_sonnige.conversa.data.groupChatKey(gid)))
+            } catch (e: Exception) {
+                _error.value = ctx.getString(R.string.err_group_action, e.message ?: "")
+            }
+        }
+        return true
+    }
+
+    fun inviteToGroup(gid: String, selected: Set<String>, extraIds: String): Boolean {
+        val extra = parseIds(extraIds) ?: return false
+        val all = (selected + extra) - (_messenger.value?.identity?.pubHex ?: "")
+        if (all.isEmpty()) return true
+        groupAction { g -> all.forEach { g.addMember(gid, it) } }
+        return true
+    }
+
+    /** Gruppenaktionen signieren und verschlüsseln (rechenintensiv) – daher im Hintergrund. */
+    fun groupAction(block: (io.github.eiji_der_sonnige.conversa.core.GroupService) -> Unit) {
+        val m = _messenger.value ?: return
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.Default) { block(m.groups) }
+            } catch (e: Exception) {
+                _error.value = ctx.getString(R.string.err_group_action, e.message ?: "")
+            }
         }
     }
 
