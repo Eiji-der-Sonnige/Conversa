@@ -302,7 +302,8 @@ class Messenger(
         val sha = r.tag("x") ?: return null
         val m = Media(r.content, mime, key.lowercase(), nonce.lowercase(), sha.lowercase(),
             r.tag("size")?.toLongOrNull() ?: 0L,
-            r.tag("duration")?.toLongOrNull()?.coerceIn(0, Media.MAX_DURATION_MS) ?: 0L)
+            r.tag("duration")?.toLongOrNull()?.coerceIn(0, Media.MAX_DURATION_MS) ?: 0L,
+            r.tag("name")?.let { Media.cleanName(it) } ?: "")
         if (!m.isWellFormed()) return null
         return ChatMessage(r.id, chatKey, fromMe, mediaType(mime), "", m, r.createdAt, status, sender)
     }
@@ -401,12 +402,19 @@ class Messenger(
 
     suspend fun sendMedia(peer: String, uri: Uri) = withContext(Dispatchers.IO) {
         val cr = ctx.contentResolver
-        val mime = cr.getType(uri) ?: "application/octet-stream"
-        val size = cr.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
-            if (c.moveToFirst()) c.getLong(0) else -1L
-        } ?: -1L
+        val mime = (cr.getType(uri) ?: "application/octet-stream").take(100)
+        var size = -1L
+        var name = ""
+        cr.query(uri, arrayOf(OpenableColumns.SIZE, OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) {
+                size = if (c.isNull(0)) -1L else c.getLong(0)
+                name = c.getString(1).orEmpty()
+            }
+        }
         if (size > MAX_MEDIA) throw IOException(ctx.getString(R.string.err_file_too_big, (MAX_MEDIA / 1024 / 1024).toInt()))
-        uploadAndSend(peer, mime, 0L) {
+        // Bei Bildern/Videos aus der Fotoauswahl wird kein Name mitgeschickt (verrät oft Datum/Kamera).
+        val sendName = if (mediaType(mime) == MsgType.FILE) Media.cleanName(name) else ""
+        uploadAndSend(peer, mime, 0L, sendName) {
             cr.openInputStream(uri)?.use { it.readBytes() } ?: throw IOException(ctx.getString(R.string.err_file_unreadable))
         }
     }
@@ -414,13 +422,13 @@ class Messenger(
     /** Sprachnachricht: Die Aufnahme wird verschlüsselt hochgeladen und danach lokal gelöscht. */
     suspend fun sendVoice(peer: String, file: File, durationMs: Long) = withContext(Dispatchers.IO) {
         try {
-            uploadAndSend(peer, VoiceRecorder.MIME, durationMs) { file.readBytes() }
+            uploadAndSend(peer, VoiceRecorder.MIME, durationMs, "") { file.readBytes() }
         } finally {
             file.delete()
         }
     }
 
-    private suspend fun uploadAndSend(peer: String, mime: String, durationMs: Long, read: () -> ByteArray) {
+    private suspend fun uploadAndSend(peer: String, mime: String, durationMs: Long, name: String, read: () -> ByteArray) {
         val placeholderId = "local-" + randomBytes(8).toHex()
         store.upsertMessage(ChatMessage(placeholderId, peer, true, mediaType(mime), ctx.getString(R.string.uploading),
             null, Event.now(), MsgStatus.SENDING))
@@ -429,7 +437,7 @@ class Messenger(
             if (bytes.size > MAX_MEDIA) throw IOException(ctx.getString(R.string.err_file_too_big, (MAX_MEDIA / 1024 / 1024).toInt()))
             val enc = media.encrypt(bytes)
             val url = media.upload(enc.data)
-            val m = Media(url, mime, enc.key.toHex(), enc.nonce.toHex(), sha256(enc.data).toHex(), bytes.size.toLong(), durationMs)
+            val m = Media(url, mime, enc.key.toHex(), enc.nonce.toHex(), sha256(enc.data).toHex(), bytes.size.toLong(), durationMs, name)
             store.removeMessage(peer, placeholderId)
             sendMediaRumor(peer, m)
         } catch (e: Exception) {
@@ -450,6 +458,7 @@ class Messenger(
             listOf("size", m.size.toString()),
         ))
         if (m.durationMs > 0) tags.add(listOf("duration", m.durationMs.toString()))
+        if (m.name.isNotEmpty()) tags.add(listOf("name", m.name))
         val rumor = GiftWrap.rumor(identity.pubHex, GiftWrap.KIND_FILE, tags, m.url)
         store.upsertMessage(ChatMessage(rumor.id, peer, true, mediaType(m.mime), "", m, rumor.createdAt, MsgStatus.SENDING))
         publishRumor(rumor, to, peer, rumor.id)

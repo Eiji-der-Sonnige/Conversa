@@ -7,6 +7,8 @@
     <string name="accept_terms">Ich akzeptiere die Nutzungsbedingungen, habe die Datenschutzhinweise gelesen und bin für meine Nutzung und meine Inhalte selbst verantwortlich.</string>
     <string name="add">Hinzufügen</string>
     <string name="add_contact">Kontakt hinzufügen</string>
+    <string name="attach">Anhängen</string>
+    <string name="attach_media">Bild oder Video</string>
     <string name="back">Zurück</string>
     <string name="background">Im Hintergrund verbunden bleiben</string>
     <string name="background_off">Aus: Nachrichten kommen an, solange die App geöffnet ist oder kurz im Hintergrund läuft.</string>
@@ -96,7 +98,14 @@
     <string name="err_username">Benutzername: mindestens 3 Zeichen</string>
     <string name="err_voice">Sprachnachricht fehlgeschlagen: %1$s</string>
     <string name="err_wrong_code">Falscher Code</string>
+    <string name="file_save">Speichern</string>
+    <string name="file_save_failed">Datei konnte nicht gespeichert werden</string>
+    <string name="file_save_q">Datei speichern?</string>
+    <string name="file_save_warning">Die Datei wird entschlüsselt und an einem Ort deiner Wahl gespeichert. Conversa öffnet sie nicht. Öffne Dateien nur, wenn du dem Absender vertraust – besonders Apps (.apk), Dokumente mit Makros und Skripte können schädlich sein.</string>
+    <string name="file_save_warning_unknown">Diese Datei stammt von einem unbekannten Absender. Beim Herunterladen erfährt dessen Medien-Server deine IP-Adresse. Die Datei wird entschlüsselt und an einem Ort deiner Wahl gespeichert; Conversa öffnet sie nicht. Öffne sie nur, wenn du dem Absender vertraust.</string>
+    <string name="file_saved">Datei gespeichert</string>
     <string name="file_type">📎 Datei (%1$s)</string>
+    <string name="file_unnamed">Datei</string>
     <string name="group_admin">Admin</string>
     <string name="group_create_hint">Du wirst Ersteller und Admin. Eingeladene müssen den Beitritt erst bestätigen. Höchstens 32 Mitglieder. Alle brauchen Conversa 1.4 oder neuer.</string>
     <string name="group_created_by">Erstellt von %1$s</string>
@@ -234,6 +243,7 @@
     <string name="save_network">Netzwerkeinstellungen speichern</string>
     <string name="security">Sicherheit</string>
     <string name="send">Senden</string>
+    <string name="send_file">Datei</string>
     <string name="send_media">Bild/Video senden</string>
     <string name="send_voice">Sprachnachricht senden</string>
     <string name="settings">Einstellungen</string>

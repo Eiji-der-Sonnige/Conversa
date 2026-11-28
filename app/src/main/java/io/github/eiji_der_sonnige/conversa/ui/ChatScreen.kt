@@ -1,5 +1,8 @@
 package io.github.eiji_der_sonnige.conversa.ui
 
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.InsertDriveFile
 import io.github.eiji_der_sonnige.conversa.data.gidOf
 import io.github.eiji_der_sonnige.conversa.data.isGroupChat
 import androidx.compose.material.icons.filled.Groups
@@ -202,6 +205,11 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) vm.sendMedia(peer, uri)
     }
+    // Beliebige Dateien über die Android-Dateiauswahl (kein Speicherzugriff nötig)
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.sendMedia(peer, uri)
+    }
+    var attachMenu by remember { mutableStateOf(false) }
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (ok) startRecording() else vm.showError(ctx.getString(R.string.mic_needed))
     }
@@ -332,9 +340,19 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                     )
                     IconButton({ stopAndSend() }) { Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.send_voice)) }
                 } else {
-                    IconButton({
-                        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-                    }) { Icon(Icons.Default.AttachFile, stringResource(R.string.send_media)) }
+                    Box {
+                        IconButton({ attachMenu = true }) { Icon(Icons.Default.AttachFile, stringResource(R.string.attach)) }
+                        DropdownMenu(attachMenu, { attachMenu = false }) {
+                            DropdownMenuItem({ Text(stringResource(R.string.attach_media)) }, {
+                                attachMenu = false
+                                picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                            })
+                            DropdownMenuItem({ Text(stringResource(R.string.send_file)) }, {
+                                attachMenu = false
+                                filePicker.launch(arrayOf("*/*"))
+                            })
+                        }
+                    }
                     OutlinedTextField(
                         input, { input = it }, Modifier.weight(1f).heightIn(max = 140.dp),
                         placeholder = { Text(stringResource(R.string.message_hint)) }, shape = RoundedCornerShape(24.dp)
@@ -472,7 +490,7 @@ private fun MessageBubble(
                             Icon(Icons.Default.PlayCircle, null, Modifier.size(40.dp))
                             Text(stringResource(R.string.play_video))
                         }
-                        else -> Text(stringResource(R.string.file_type, msg.media.mime))
+                        else -> FileMessage(m, msg, trusted, onError)
                     }
                     Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                         Text(formatTime(msg.createdAt), style = MaterialTheme.typography.labelSmall)
@@ -490,6 +508,60 @@ private fun MessageBubble(
                 DropdownMenuItem({ Text(stringResource(R.string.delete_ellipsis)) }, { actions = false; onDelete() })
             }
         }
+    }
+}
+
+/**
+ * Datei: wird nie automatisch geöffnet oder ausgeführt, nur auf Wunsch entschlüsselt und an einem selbst gewählten
+ * Ort gespeichert (Android-Dateiauswahl, keine Speicherberechtigung nötig).
+ */
+@Composable
+private fun FileMessage(m: Messenger, msg: ChatMessage, trusted: Boolean, onError: (String) -> Unit) {
+    val media = msg.media ?: return
+    val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var confirm by remember { mutableStateOf(false) }
+    val failedText = stringResource(R.string.file_save_failed)
+    val savedText = stringResource(R.string.file_saved)
+    val saver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(media.mime.ifBlank { "application/octet-stream" })) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        busy = true
+        scope.launch {
+            try {
+                val bytes = m.media.load(media)
+                withContext(Dispatchers.IO) {
+                    ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } ?: throw java.io.IOException()
+                }
+                onError(savedText)
+            } catch (e: Exception) {
+                onError(failedText)
+            } finally {
+                busy = false
+            }
+        }
+    }
+    val name = media.name.ifEmpty { stringResource(R.string.file_unnamed) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.InsertDriveFile, null, Modifier.size(36.dp))
+        Column(Modifier.padding(horizontal = 8.dp).widthIn(max = 170.dp)) {
+            Text(name, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(android.text.format.Formatter.formatShortFileSize(ctx, media.size) + " · " + media.mime.take(40),
+                style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (busy) CircularProgressIndicator(Modifier.size(24.dp))
+        else IconButton({ if (trusted && !msg.fromMe) confirm = true else if (msg.fromMe) saver.launch(name) else confirm = true }) {
+            Icon(Icons.Default.Download, stringResource(R.string.file_save))
+        }
+    }
+    if (confirm) {
+        AlertDialog(
+            onDismissRequest = { confirm = false },
+            title = { Text(stringResource(R.string.file_save_q)) },
+            text = { Text(stringResource(if (trusted) R.string.file_save_warning else R.string.file_save_warning_unknown)) },
+            confirmButton = { TextButton({ confirm = false; saver.launch(name) }) { Text(stringResource(R.string.file_save)) } },
+            dismissButton = { TextButton({ confirm = false }) { Text(stringResource(R.string.cancel)) } }
+        )
     }
 }
 

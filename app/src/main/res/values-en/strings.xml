@@ -6,6 +6,8 @@
     <string name="accept_terms">I accept the terms of use, have read the privacy notice and am responsible for my own use and content.</string>
     <string name="add">Add</string>
     <string name="add_contact">Add contact</string>
+    <string name="attach">Attach</string>
+    <string name="attach_media">Photo or video</string>
     <string name="back">Back</string>
     <string name="background">Stay connected in the background</string>
     <string name="background_off">Off: messages arrive while the app is open or briefly in the background.</string>
@@ -95,7 +97,14 @@
     <string name="err_username">Username: at least 3 characters</string>
     <string name="err_voice">Voice message failed: %1$s</string>
     <string name="err_wrong_code">Wrong code</string>
+    <string name="file_save">Save</string>
+    <string name="file_save_failed">File could not be saved</string>
+    <string name="file_save_q">Save file?</string>
+    <string name="file_save_warning">The file will be decrypted and saved to a location of your choice. Conversa does not open it. Only open files if you trust the sender – apps (.apk), documents with macros and scripts in particular can be harmful.</string>
+    <string name="file_save_warning_unknown">This file comes from an unknown sender. When downloading, their media server learns your IP address. The file will be decrypted and saved to a location of your choice; Conversa does not open it. Only open it if you trust the sender.</string>
+    <string name="file_saved">File saved</string>
     <string name="file_type">📎 File (%1$s)</string>
+    <string name="file_unnamed">File</string>
     <string name="group_admin">Admin</string>
     <string name="group_create_hint">You become creator and admin. Invited people must confirm joining first. At most 32 members. Everyone needs Conversa 1.4 or newer.</string>
     <string name="group_created_by">Created by %1$s</string>
@@ -233,6 +242,7 @@
     <string name="save_network">Save network settings</string>
     <string name="security">Security</string>
     <string name="send">Send</string>
+    <string name="send_file">File</string>
     <string name="send_media">Send photo/video</string>
     <string name="send_voice">Send voice message</string>
     <string name="settings">Settings</string>

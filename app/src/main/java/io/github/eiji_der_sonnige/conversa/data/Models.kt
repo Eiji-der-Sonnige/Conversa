@@ -33,11 +33,14 @@ data class Media(
     val size: Long,
     /** Nur bei Sprachnachrichten: Länge in Millisekunden (0 = unbekannt). */
     val durationMs: Long = 0,
+    /** Dateiname (nur zur Anzeige und als Vorschlag beim Speichern, bereinigt). */
+    val name: String = "",
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("url", url).put("mime", mime).put("key", keyHex)
         .put("nonce", nonceHex).put("sha", sha256).put("size", size)
         .apply { if (durationMs > 0) put("dur", durationMs) }
+        .apply { if (name.isNotEmpty()) put("name", name) }
 
     /**
      * Prüft vom Absender gelieferte Felder, bevor sie verwendet werden: Die Prüfsumme dient als
@@ -47,16 +50,27 @@ data class Media(
     fun isWellFormed(): Boolean =
         HEX64.matches(sha256) && HEX64.matches(keyHex) && HEX24.matches(nonceHex) &&
             url.startsWith("https://") && url.length <= 2048 && size >= 0 && mime.length <= 128 &&
-            durationMs in 0..MAX_DURATION_MS
+            durationMs in 0..MAX_DURATION_MS && name.length <= MAX_NAME
 
     companion object {
         private val HEX64 = Regex("^[0-9a-f]{64}$")
         private val HEX24 = Regex("^[0-9a-f]{24}$")
         const val MAX_DURATION_MS = 24L * 3600 * 1000
+        const val MAX_NAME = 120
+
+        /**
+         * Dateinamen kommen vom Absender: keine Pfade („../“), keine Steuer- oder Richtungszeichen (Schutz vor
+         * „rechnung‮fdp.exe“-Tricks), begrenzte Länge.
+         */
+        fun cleanName(raw: String): String = raw
+            .substringAfterLast('/').substringAfterLast('\\')
+            .filter { !it.isISOControl() && Character.getType(it) != Character.FORMAT.toInt() }
+            .trim().trimStart('.')
+            .take(MAX_NAME)
 
         fun fromJson(o: JSONObject) = Media(
             o.getString("url"), o.getString("mime"), o.getString("key"),
-            o.getString("nonce"), o.getString("sha"), o.optLong("size"), o.optLong("dur")
+            o.getString("nonce"), o.getString("sha"), o.optLong("size"), o.optLong("dur"), o.optString("name")
         )
     }
 }
@@ -84,7 +98,7 @@ data class ChatMessage(
         MsgType.IMAGE -> ctx.getString(R.string.preview_image)
         MsgType.VIDEO -> ctx.getString(R.string.preview_video)
         MsgType.AUDIO -> ctx.getString(R.string.preview_voice)
-        MsgType.FILE -> ctx.getString(R.string.preview_file)
+        MsgType.FILE -> ctx.getString(R.string.preview_file) + (media?.name?.takeIf { it.isNotEmpty() }?.let { " $it" } ?: "")
     }
 
     companion object {
