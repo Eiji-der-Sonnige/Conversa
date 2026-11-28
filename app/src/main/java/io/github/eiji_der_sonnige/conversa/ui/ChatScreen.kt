@@ -219,7 +219,13 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
         if (ok) m.calls.startCall(peer, video)
         pendingCallVideo = null
     }
-    fun call(video: Boolean) {
+    var torCallWarning by remember { mutableStateOf<Boolean?>(null) }
+    fun call(video: Boolean, confirmed: Boolean = false) {
+        // Tor schützt Anrufe nicht: Ohne TURN-Server liefe die Verbindung direkt und verriete die echte IP-Adresse.
+        if (!confirmed && settings.useTor && settings.turnUrl.isBlank()) {
+            torCallWarning = video
+            return
+        }
         pendingCallVideo = video
         val perms = if (video) arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA)
         else arrayOf(Manifest.permission.RECORD_AUDIO)
@@ -319,7 +325,7 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                         showRead = settings.readReceipts,
                         onRetry = { vm.resend(msg) },
                         onPlay = { videoToPlay = msg },
-                        onCopy = { copyToClipboard(ctx, ctx.getString(R.string.message_hint), msg.text) },
+                        onCopy = { copyToClipboard(ctx, ctx.getString(R.string.message_hint), msg.text, sensitive = true) },
                         onDelete = { deleteMsg = msg },
                         onError = { vm.showError(it) },
                     )
@@ -444,6 +450,19 @@ fun ChatScreen(vm: MainViewModel, m: Messenger, peer: String) {
                 TextButton({ confirmJoin = false; vm.groupAction { it.accept(group.gid) } }) { Text(stringResource(R.string.group_join_confirm)) }
             },
             dismissButton = { TextButton({ confirmJoin = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
+    torCallWarning?.let { video ->
+        AlertDialog(
+            onDismissRequest = { torCallWarning = null },
+            title = { Text(stringResource(R.string.tor_call_q)) },
+            text = { Text(stringResource(R.string.tor_call_text)) },
+            confirmButton = {
+                TextButton({ torCallWarning = null; call(video, confirmed = true) }) {
+                    Text(stringResource(R.string.tor_call_anyway), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton({ torCallWarning = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     videoToPlay?.let { VideoDialog(m, it) { videoToPlay = null } }

@@ -263,6 +263,9 @@
     <string name="terms">Nutzungsbedingungen</string>
     <string name="terms_liability">Nutzungsbedingungen &amp; Haftung</string>
     <string name="text_unavailable">Text nicht verfügbar.</string>
+    <string name="tor_call_anyway">Trotzdem anrufen</string>
+    <string name="tor_call_q">Anruf ohne IP-Schutz?</string>
+    <string name="tor_call_text">Anrufe laufen nicht über Tor. Ohne eigenen TURN-Server (Einstellungen → Anrufe) sehen der Gesprächspartner und die STUN-Server (Google, Cloudflare) deine echte IP-Adresse.</string>
     <string name="turn_on">Einschalten</string>
     <string name="turn_pass">TURN-Passwort</string>
     <string name="turn_server">TURN-Server (turn:host:3478)</string>

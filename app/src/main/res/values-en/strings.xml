@@ -262,6 +262,9 @@
     <string name="terms">Terms of use</string>
     <string name="terms_liability">Terms of use &amp; liability</string>
     <string name="text_unavailable">Text not available.</string>
+    <string name="tor_call_anyway">Call anyway</string>
+    <string name="tor_call_q">Call without IP protection?</string>
+    <string name="tor_call_text">Calls do not go through Tor. Without your own TURN server (Settings → Calls), the other person and the STUN servers (Google, Cloudflare) can see your real IP address.</string>
     <string name="turn_on">Turn on</string>
     <string name="turn_pass">TURN password</string>
     <string name="turn_server">TURN server (turn:host:3478)</string>
